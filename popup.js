@@ -123,8 +123,15 @@ function gorselGuncelleBotButonu(aktifMi) {
 document.getElementById('toggleBotBtn').addEventListener('click', () => {
     chrome.storage.local.get({ botAktif: false, hedefLink: '' }, (data) => {
         const yeniDurum = !data.botAktif; 
-        chrome.storage.local.set({ botAktif: yeniDurum }, () => {
-            
+        
+        let kayitVerisi = { botAktif: yeniDurum };
+        if (yeniDurum) {
+            kayitVerisi.sayacToplam = 0;
+            kayitVerisi.sayacErkek = 0;
+            kayitVerisi.sayacKadin = 0;
+        }
+
+        chrome.storage.local.set(kayitVerisi, () => {
             if (yeniDurum) {
                 setStatus('Bot Açıldı! Sayfa yenileniyor...', 'ok');
                 uiLogEkle('Bot sistem başlatıldı.', 'info');
