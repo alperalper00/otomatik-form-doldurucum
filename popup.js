@@ -169,7 +169,6 @@ document.getElementById('kaydetBtn').addEventListener('click', (e) => {
     const ortalamaGecikme = parseInt(document.getElementById('delaySlider').value);
     let hedefAdeti = parseInt(document.getElementById('hedefAdetInput').value) || 10;
 
-    // --- YENİ EKLENEN UYARI KONTROLÜ ---
     if (hedefAdeti > 50) {
         setStatus('Maksimum 50 adet belirleyebilirsiniz!', 'err');
         document.getElementById('hedefAdetInput').value = 50; 
@@ -184,7 +183,6 @@ document.getElementById('kaydetBtn').addEventListener('click', (e) => {
         }, 2000);
         return; 
     }
-    // -----------------------------------
 
     chrome.storage.local.set({
         hedefLink: link,
@@ -211,14 +209,11 @@ document.getElementById('kaydetBtn').addEventListener('click', (e) => {
 });
 
 document.getElementById('sifirlaBtn').addEventListener('click', () => {
-
     chrome.storage.local.set({ sayacToplam: 0, sayacErkek: 0, sayacKadin: 0, islemGecmisi: [] }, () => {
-        
         document.getElementById('statToplam').innerText = '0';
         document.getElementById('statErkek').innerText = '0';
         document.getElementById('statKadin').innerText = '0';
         
-        // Log ekranını temizle
         const box = document.getElementById('logBox');
         box.innerHTML = '<div class="log-item" style="justify-content:center; color: var(--muted);">Henüz işlem yok</div>';
         
