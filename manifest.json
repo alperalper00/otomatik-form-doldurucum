@@ -1,9 +1,18 @@
 {
   "manifest_version": 3,
   "name": "Otomatik Form Seçenek İşaretleyici",
-  "version": "1.0",
-  "description": "Google Forms üzerinde otomatik olarak seçenekleri işaretleyen bir TARAYICI uzantısı.",
-  "permissions": ["storage", "tabs", "notifications"],
+  "version": "1.2",
+  "description": "Google Forms üzerinde otomatik olarak seçenekleri işaretleyen ve her gönderimde kimlik değiştiren tarayıcı uzantısı.",
+  "permissions": [
+    "storage", 
+    "tabs", 
+    "notifications", 
+    "alarms",
+    "declarativeNetRequest"
+  ],
+  "host_permissions": [
+    "*://docs.google.com/*"
+  ],
   "icons": {
     "16": "icon.png",
     "48": "icon.png",
