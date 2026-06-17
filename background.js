@@ -40,7 +40,7 @@ function rastgeleKimlikAyarla() {
                     type: "modifyHeaders",
                     requestHeaders: [{
                         header: "cookie",
-                        operation: "remove" 
+                        operation: "remove"
                     }]
                 },
                 condition: {
@@ -50,10 +50,10 @@ function rastgeleKimlikAyarla() {
             }
         ]
     });
-    
+
     // Viewport Spoofing (Sahte Çözünürlük) için boyutları hafızaya kaydet
-    chrome.storage.local.set({ 
-        sahteViewport: { w: secilenCihaz.width, h: secilenCihaz.height, tip: secilenCihaz.type } 
+    chrome.storage.local.set({
+        sahteViewport: { w: secilenCihaz.width, h: secilenCihaz.height, tip: secilenCihaz.type }
     });
 
     return secilenCihaz.ua;
@@ -63,7 +63,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "bildirimGonder") {
         chrome.notifications.create({
             type: 'basic',
-            iconUrl: 'icon.png', 
+            iconUrl: 'icon.png',
             title: 'Form Botu Ultra',
             message: request.msg,
             priority: 2
