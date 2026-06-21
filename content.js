@@ -214,16 +214,297 @@
 
     const bekle = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+    function navigationButonuVarMi() {
+        const buttons = document.querySelectorAll('[role="button"]');
+        for (const btn of buttons) {
+            const yazi = btn.innerText ? btn.innerText.toLowerCase().trim() : "";
+            if (yazi.includes("sonraki") || yazi.includes("ileri") || yazi.includes("next") || 
+                yazi.includes("gönder") || yazi.includes("submit") || yazi.includes("geri") || 
+                yazi.includes("back")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    async function formElemanlariniBekle(maxWaitMs = 30000) {
+        const startTime = Date.now();
+        let lastCount = -1;
+        let settleTime = Date.now();
+        while (Date.now() - startTime < maxWaitMs) {
+            const blocks = document.querySelectorAll('.Qr7Oae, [role="listitem"], .geS54d, [data-item-id]');
+            const count = blocks.length;
+            const hasButton = navigationButonuVarMi();
+            
+            if (count !== lastCount) {
+                lastCount = count;
+                settleTime = Date.now();
+            } else if (Date.now() - settleTime > 1200) {
+                if (hasButton) {
+                    return true;
+                }
+            }
+            await bekle(150);
+        }
+        return lastCount > 0 || navigationButonuVarMi();
+    }
+
+    const klavyeKomsulari = {
+        'a': 'qwsz', 'b': 'gnhv', 'c': 'xvdf', 'd': 'erfcxs', 'e': 'rdws',
+        'f': 'rtgved', 'g': 'tyhbfr', 'h': 'yujngt', 'i': 'ujko', 'j': 'uikmnh',
+        'k': 'ijlm', 'l': 'okp', 'm': 'njk', 'n': 'bhjm', 'o': 'iklp',
+        'p': 'ol', 'q': 'wa', 'r': 'tfde', 's': 'wedxza', 't': 'ygfr',
+        'u': 'yhji', 'v': 'cfgb', 'w': 'qase', 'x': 'zsdc', 'y': 'tghu', 'z': 'asx',
+        'ş': 'liao', 'ç': 'xdes', 'ğ': 'poui', 'ü': 'ğpo', 'ö': 'lmn', 'ı': 'uio'
+    };
+
+    let insansiModAyarlari = { aktif: false, fare: true, hata: true, kaydir: true };
+    let currentCursorX = window.innerWidth / 2;
+    let currentCursorY = window.innerHeight / 2;
+
+    function imleciEnjekteEt() {
+        if (document.getElementById('fake-cursor')) return;
+        const style = document.createElement('style');
+        style.id = 'fake-cursor-style';
+        style.textContent = `
+            #fake-cursor {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 14px;
+                height: 14px;
+                background: rgba(124, 106, 255, 0.75);
+                border: 2px solid #ffffff;
+                border-radius: 50%;
+                z-index: 2147483647;
+                pointer-events: none;
+                box-shadow: 0 0 10px rgba(124, 106, 255, 0.8), 0 0 4px rgba(255,255,255,0.5);
+                transform: translate3d(0px, 0px, 0);
+                transition: transform 0.05s ease-out;
+            }
+        `;
+        document.head.appendChild(style);
+
+        const cursor = document.createElement('div');
+        cursor.id = 'fake-cursor';
+        cursor.style.transform = `translate3d(${currentCursorX}px, ${currentCursorY}px, 0)`;
+        document.body.appendChild(cursor);
+    }
+
+    function imleciHareketEttir(element) {
+        return new Promise((resolve) => {
+            if (document.hidden) {
+                resolve();
+                return;
+            }
+            imleciEnjekteEt();
+            const cursor = document.getElementById('fake-cursor');
+            if (!cursor) {
+                resolve();
+                return;
+            }
+
+            const rect = element.getBoundingClientRect();
+            const randomXOffset = (Math.random() - 0.5) * (rect.width * 0.4);
+            const randomYOffset = (Math.random() - 0.5) * (rect.height * 0.4);
+            const targetX = rect.left + rect.width / 2 + randomXOffset;
+            const targetY = rect.top + rect.height / 2 + randomYOffset;
+
+            const startX = currentCursorX;
+            const startY = currentCursorY;
+
+            const ctrlX = (startX + targetX) / 2 + (Math.random() - 0.5) * 150;
+            const ctrlY = (startY + targetY) / 2 + (Math.random() - 0.5) * 150;
+
+            const distance = Math.hypot(targetX - startX, targetY - startY);
+            const duration = Math.max(400, Math.min(1000, distance * 1.5));
+
+            const startTime = performance.now();
+
+            function animate(time) {
+                const elapsed = time - startTime;
+                const t = Math.min(1, elapsed / duration);
+
+                const easeT = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+                const x = (1 - easeT) * (1 - easeT) * startX + 2 * (1 - easeT) * easeT * ctrlX + easeT * easeT * targetX;
+                const y = (1 - easeT) * (1 - easeT) * startY + 2 * (1 - easeT) * easeT * ctrlY + easeT * easeT * targetY;
+
+                cursor.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+                currentCursorX = x;
+                currentCursorY = y;
+
+                const hoveredEl = document.elementFromPoint(x, y);
+                if (hoveredEl) {
+                    hoveredEl.dispatchEvent(new MouseEvent('mousemove', {
+                        bubbles: true,
+                        clientX: x,
+                        clientY: y
+                    }));
+                }
+
+                if (t < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    resolve();
+                }
+            }
+
+            requestAnimationFrame(animate);
+        });
+    }
+
+    function yavasKaydir(element) {
+        return new Promise((resolve) => {
+            if (document.hidden) {
+                resolve();
+                return;
+            }
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(resolve, 800);
+        });
+    }
+
+    function dispatchKeyEvents(element, char, keyCode = 0) {
+        const code = keyCode || char.charCodeAt(0);
+        element.dispatchEvent(new KeyboardEvent('keydown', { key: char, keyCode: code, bubbles: true }));
+        element.dispatchEvent(new KeyboardEvent('keypress', { key: char, keyCode: code, bubbles: true }));
+        element.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'insertText', data: char }));
+        element.dispatchEvent(new KeyboardEvent('keyup', { key: char, keyCode: code, bubbles: true }));
+    }
+
     async function insansiYaz(element, metin) {
+        if (!element) return;
+        if (document.hidden) {
+            element.value = metin;
+            element.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'insertText', data: metin }));
+            element.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: metin }));
+            element.dispatchEvent(new Event('change', { bubbles: true }));
+            return;
+        }
+        if (insansiModAyarlari.aktif && insansiModAyarlari.kaydir) {
+            await yavasKaydir(element);
+            await bekle(Math.random() * 200 + 100);
+        }
+        if (insansiModAyarlari.aktif && insansiModAyarlari.fare) {
+            await imleciHareketEttir(element);
+            await bekle(Math.random() * 150 + 100);
+        }
+
         element.focus();
         element.value = "";
-        for (let harf of metin) {
-            element.value += harf;
-            element.dispatchEvent(new Event('input', { bubbles: true }));
-            await bekle(Math.random() * 60 + 40);
+
+        const hataAktif = insansiModAyarlari.aktif && insansiModAyarlari.hata;
+
+        for (let i = 0; i < metin.length; i++) {
+            const char = metin[i];
+            const lowerChar = char.toLowerCase();
+
+            // 1. Yazma Hatası (Typo) Simülasyonu
+            if (hataAktif && Math.random() < 0.07 && i > 1 && i < metin.length - 1 && klavyeKomsulari[lowerChar]) {
+                const neighbors = klavyeKomsulari[lowerChar];
+                const firstTypoChar = neighbors[Math.floor(Math.random() * neighbors.length)];
+
+                // Bazen ardışık 2 karakter yanlış yazılır (%20 olasılık)
+                const doubleTypo = Math.random() < 0.20 && i < metin.length - 2;
+                let secondTypoChar = "";
+                if (doubleTypo) {
+                    const nextChar = metin[i + 1].toLowerCase();
+                    const nextNeighbors = klavyeKomsulari[nextChar] || neighbors;
+                    secondTypoChar = nextNeighbors[Math.floor(Math.random() * nextNeighbors.length)];
+                }
+
+                // İlk hatalı harfi yaz
+                element.value += firstTypoChar;
+                element.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'insertText', data: firstTypoChar }));
+                element.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: firstTypoChar }));
+                dispatchKeyEvents(element, firstTypoChar);
+                await bekle(Math.random() * 60 + 50);
+
+                if (doubleTypo) {
+                    // İkinci hatalı harfi yaz
+                    element.value += secondTypoChar;
+                    element.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'insertText', data: secondTypoChar }));
+                    element.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: secondTypoChar }));
+                    dispatchKeyEvents(element, secondTypoChar);
+                    await bekle(Math.random() * 60 + 50);
+                }
+
+                // Hatanın fark edilmesi için duraklama (İnsani tepki süresi)
+                await bekle(Math.random() * 200 + 200);
+
+                // Hataları Backspace ile sil
+                const silinecekAdet = doubleTypo ? 2 : 1;
+                for (let k = 0; k < silinecekAdet; k++) {
+                    element.value = element.value.slice(0, -1);
+                    element.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'deleteContentBackward' }));
+                    element.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'deleteContentBackward' }));
+                    dispatchKeyEvents(element, 'Backspace', 8);
+                    await bekle(Math.random() * 80 + 60);
+                }
+
+                // Düzeltip doğru harfi yazmaya geçmeden önceki küçük duraksama
+                await bekle(Math.random() * 150 + 100);
+            }
+
+            // 2. Doğru Harfi Yazma
+            element.value += char;
+            element.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'insertText', data: char }));
+            element.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: char }));
+            dispatchKeyEvents(element, char);
+
+            // 3. Karakterler Arası Gecikme Hesaplama (Keystroke Dynamics)
+            if (insansiModAyarlari.aktif) {
+                let delay = Math.random() * 70 + 50; // Temel harf yazma süresi
+
+                // Büyük harf yazarken gecikmeyi artır (Shift tuşuna basma simülasyonu)
+                if (char !== char.toLowerCase()) {
+                    delay += Math.random() * 80 + 50;
+                }
+
+                // Boşluk veya noktalama işaretlerinde düşünme/duraksama simülasyonu
+                if (char === ' ') {
+                    if (Math.random() < 0.3) {
+                        delay += Math.random() * 350 + 200; // Kelime arası derin duraksama
+                    } else {
+                        delay += Math.random() * 100 + 50;
+                    }
+                } else if (['.', ',', '?', '!', '-'].includes(char)) {
+                    delay += Math.random() * 400 + 250; // Cümle/ifade sonu duraksaması
+                }
+
+                await bekle(delay);
+            }
         }
+
         element.dispatchEvent(new Event('change', { bubbles: true }));
         element.blur();
+    }
+
+    async function insansiTikla(element) {
+        if (!element) return;
+        if (document.hidden) {
+            element.click();
+            return;
+        }
+        if (insansiModAyarlari.aktif && insansiModAyarlari.kaydir) {
+            await yavasKaydir(element);
+            await bekle(Math.random() * 200 + 100);
+        }
+        if (insansiModAyarlari.aktif && insansiModAyarlari.fare) {
+            await imleciHareketEttir(element);
+            await bekle(Math.random() * 150 + 100);
+        }
+
+        const rect = element.getBoundingClientRect();
+        const clientX = rect.left + rect.width / 2;
+        const clientY = rect.top + rect.height / 2;
+
+        element.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX, clientY }));
+        element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX, clientY }));
+        await bekle(Math.random() * 60 + 40);
+        element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX, clientY }));
+        element.click();
     }
 
     async function logEkle(mesaj, tip) {
@@ -556,21 +837,60 @@
         }
     });
 
-    const baglantiVerisi = await chrome.storage.local.get({ hedefLink: '', botAktif: false });
+    const LIMIT_SURESI_MS = 6 * 60 * 60 * 1000; // 6 saat (6 * 60 * 60 * 1000)
+    const LIMIT_SURESI_METIN = LIMIT_SURESI_MS === 2 * 60 * 1000 ? "2 dakikalık" : (LIMIT_SURESI_MS === 6 * 60 * 60 * 1000 ? "6 saatlik" : "12 saatlik");
+    console.log("[Form Bot] Aktif Limit Süresi: " + LIMIT_SURESI_METIN);
+
+    const baglantiVerisi = await chrome.storage.local.get({
+        hedefLink: '',
+        botAktif: false,
+        insansiModAktif: false,
+        lisansDurumu: false,
+        gunlukGonderimAdet: 0,
+        limitSifirlamaZamani: 0
+    });
     if (!baglantiVerisi.botAktif) return;
+
+    // Lisans veya günlük limit kontrolü
+    if (!baglantiVerisi.lisansDurumu) {
+        let simdi = Date.now();
+        let limitSifirlamaZamani = baglantiVerisi.limitSifirlamaZamani || 0;
+        let gunlukAdet = baglantiVerisi.gunlukGonderimAdet || 0;
+
+        if (limitSifirlamaZamani > simdi + LIMIT_SURESI_MS) {
+            gunlukAdet = 0;
+            limitSifirlamaZamani = 0;
+            await chrome.storage.local.set({ limitSifirlamaZamani: 0, gunlukGonderimAdet: 0 });
+        } else if (limitSifirlamaZamani > 0 && simdi >= limitSifirlamaZamani) {
+            gunlukAdet = 0;
+            limitSifirlamaZamani = 0;
+            await chrome.storage.local.set({ limitSifirlamaZamani: 0, gunlukGonderimAdet: 0 });
+        }
+
+        if (gunlukAdet >= 20) {
+            await logEkle(`🚨 LİMİT AŞILDI: Ücretsiz sürüm ${LIMIT_SURESI_METIN} 20 adetle sınırlıdır!`, "err");
+            chrome.runtime.sendMessage({
+                action: "bildirimGonder",
+                msg: `${LIMIT_SURESI_METIN} form gönderme limitine (20 adet) ulaştınız. Lütfen sınırsız sürüm için lisans satın alın!`
+            });
+            await chrome.storage.local.set({ botAktif: false });
+            return;
+        }
+    }
 
     const kaydedilenId = extractFormId(baglantiVerisi.hedefLink);
     const mevcutId = extractFormId(window.location.href);
-    if (!kaydedilenId || kaydedilenId !== mevcutId) return;
+    if (kaydedilenId && kaydedilenId !== mevcutId) return;
 
-    const watchdogTimer = setTimeout(async () => {
+    const watchdogSuresi = baglantiVerisi.insansiModAktif ? 300000 : 90000; // İnsansı modda 5 dakika (300sn), normalde 90 saniye (yavaş bağlantılar için uzatıldı)
+    let watchdogTimer = setTimeout(async () => {
         const data = await chrome.storage.local.get({ botAktif: false });
         if (data.botAktif) {
             await sesCal('error');
             await logEkle("⚠️ Sayfa yanıt vermedi. Yeniden deneniyor...", "err");
             window.location.replace(window.location.origin + window.location.pathname + "?pli=1&t=" + Date.now());
         }
-    }, 30000);
+    }, watchdogSuresi);
 
     const sayfaIcerigi = document.body.innerText.toLowerCase();
     if (sayfaIcerigi.includes("robot") || sayfaIcerigi.includes("captcha") || document.querySelector('iframe[src*="recaptcha"]')) {
@@ -604,14 +924,32 @@
             aktifSablon: '',
             sablonlar: [],
             gonderimZamanlari: [],
-            botBaslangicZamani: 0
+            botBaslangicZamani: 0,
+            lisansDurumu: false,
+            gunlukGonderimAdet: 0,
+            limitSifirlamaZamani: 0
         });
+
+        let simdi = Date.now();
+        let limitSifirlamaZamani = data.limitSifirlamaZamani || 0;
+        let gunlukAdet = data.gunlukGonderimAdet || 0;
+
+        if (limitSifirlamaZamani > 0 && simdi >= limitSifirlamaZamani) {
+            gunlukAdet = 0;
+            limitSifirlamaZamani = 0;
+        }
+
+        if (!data.lisansDurumu) {
+            if (limitSifirlamaZamani === 0) {
+                limitSifirlamaZamani = simdi + LIMIT_SURESI_MS;
+            }
+            gunlukAdet += 1;
+        }
 
         const cinsiYazi = data.sonSecilenCinsiyet === 'erkek' ? 'Erkek' : 'Kadın';
         await logEkle(`✅ Form Gönderildi (${cinsiYazi})`, 'ok');
 
         // Hız hesaplaması için zaman damgası kaydet
-        const simdi = Date.now();
         const zamanlari = [...(data.gonderimZamanlari || []), simdi].slice(-50); // Son 50 gönderimi tut
 
         const guncelleme = {
@@ -622,7 +960,9 @@
             genelErkek: (data.genelErkek || 0) + (data.sonSecilenCinsiyet === 'erkek' ? 1 : 0),
             genelKadin: (data.genelKadin || 0) + (data.sonSecilenCinsiyet === 'kadin' ? 1 : 0),
             botAktif: true,
-            gonderimZamanlari: zamanlari
+            gonderimZamanlari: zamanlari,
+            gunlukGonderimAdet: gunlukAdet,
+            limitSifirlamaZamani: limitSifirlamaZamani
         };
 
         if (data.aktifSablon && data.sablonlar && data.sablonlar.length > 0) {
@@ -677,8 +1017,18 @@
         hedefSik: 'random', hedefMenu: 'random',
         gecikmeMs: 500,
         ozelKurallar: {},
-        botBaslangicZamani: 0
+        botBaslangicZamani: 0,
+        insansiModAktif: false,
+        insansiFare: true,
+        insansiHata: true,
+        insansiKaydir: true
     });
+
+    const isPremium = baglantiVerisi.lisansDurumu === true;
+    insansiModAyarlari.aktif = (isPremium && ayarlar.insansiModAktif && !document.hidden) || false;
+    insansiModAyarlari.fare = isPremium && ayarlar.insansiFare !== false;
+    insansiModAyarlari.hata = isPremium && ayarlar.insansiHata !== false;
+    insansiModAyarlari.kaydir = isPremium && ayarlar.insansiKaydir !== false;
 
     // Bot başlangıç zamanını kaydet (henüz kaydedilmemişse)
     if (!ayarlar.botBaslangicZamani) {
@@ -694,9 +1044,36 @@
     }
     await chrome.storage.local.set({ sonSecilenCinsiyet: secilenCinsiyet });
 
-    await bekle(insansiGecikme(tabanGecikme));
+    let dogrulamaHataSayaci = 0;
 
-    const rawBlocks = Array.from(document.querySelectorAll('.Qr7Oae, [role="listitem"], .geS54d, [data-item-id]'));
+    function dogrulamaHatasiVarMi() {
+        const alerts = document.querySelectorAll('[role="alert"]');
+        for (const el of alerts) {
+            const text = el.innerText ? el.innerText.toLowerCase().trim() : "";
+            if (text.includes("yanıtlanmalıdır") || 
+                text.includes("gerekli") || 
+                text.includes("zorunlu") || 
+                text.includes("required") || 
+                text.includes("invalid") || 
+                text.includes("geçersiz") || 
+                text.includes("hata") || 
+                text.includes("doğru") ||
+                text.includes("seçeneği")) {
+                const style = window.getComputedStyle(el);
+                if (style.display !== 'none' && style.visibility !== 'hidden' && el.offsetHeight > 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    async function formuDoldurVeGonder() {
+        await bekle(insansiGecikme(tabanGecikme));
+
+        await formElemanlariniBekle();
+
+        const rawBlocks = Array.from(document.querySelectorAll('.Qr7Oae, [role="listitem"], .geS54d, [data-item-id]'));
     const soruBloklari = [];
 
 
@@ -714,6 +1091,10 @@
     });
 
     for (const soru of soruBloklari) {
+        if (insansiModAyarlari.aktif) {
+            await bekle(Math.random() * 600 + 400); // Soru okuma/karar verme taklidi
+        }
+
         let rows = Array.from(soru.querySelectorAll('[role="row"]')).filter(r => r.querySelector('[role="rowheader"]'));
         if (rows.length === 0) {
             const rowContainers = Array.from(soru.querySelectorAll('[role="radiogroup"], [role="group"]'));
@@ -752,7 +1133,7 @@
                 if (kural && kural.rule !== "default") {
                     if (kural.rule === "random") {
                         const secilecekSik = secenekler[Math.floor(Math.random() * secenekler.length)];
-                        if (secilecekSik) secilecekSik.click();
+                        if (secilecekSik) await insansiTikla(secilecekSik);
                         rowHalledildi = true;
                     } else {
                         const hedefOptionText = kural.rule;
@@ -767,7 +1148,7 @@
                             }
 
                             if (optText.toLowerCase().trim() === hedefOptionText.toLowerCase().trim()) {
-                                secenek.click();
+                                await insansiTikla(secenek);
                                 secenekBulundu = true;
                                 break;
                             }
@@ -786,7 +1167,7 @@
                         const hedefIndex = ayarlar.hedefSik - 1;
                         secilecekSik = secenekler[hedefIndex] || secenekler[secenekler.length - 1];
                     }
-                    if (secilecekSik) secilecekSik.click();
+                    if (secilecekSik) await insansiTikla(secilecekSik);
                 }
             }
             continue;
@@ -809,7 +1190,7 @@
                 if (kural.rule === "random") {
                     const secilecekSik = secenekler[Math.floor(Math.random() * secenekler.length)];
                     if (secilecekSik) {
-                        secilecekSik.click();
+                        await insansiTikla(secilecekSik);
                         const optInput = findOptionTextInput(secilecekSik);
                         if (optInput) {
                             await insansiYaz(optInput, "Diğer");
@@ -834,7 +1215,7 @@
                         }
 
                         if (yazi.toLowerCase().trim() === hedefOptionText.toLowerCase().trim()) {
-                            secenek.click();
+                            await insansiTikla(secenek);
                             const optInput = findOptionTextInput(secenek);
                             if (optInput) {
                                 await insansiYaz(optInput, "Diğer");
@@ -898,7 +1279,7 @@
                 const kadinMi = yazi === 'kadın' || yazi === 'kadin' || yazi === 'female' || yazi === 'bayan' || yazi === 'kız' || yazi === 'kiz';
 
                 if ((secilenCinsiyet === 'erkek' && erkekMi) || (secilenCinsiyet === 'kadin' && kadinMi)) {
-                    secenek.click();
+                    await insansiTikla(secenek);
                     const optInput = findOptionTextInput(secenek);
                     if (optInput) {
                         await insansiYaz(optInput, "Diğer");
@@ -912,7 +1293,7 @@
                 const rastgeleSinifIndex = Math.floor(Math.random() * secenekler.length);
                 const secilecekSik = secenekler[rastgeleSinifIndex];
                 if (secilecekSik) {
-                    secilecekSik.click();
+                    await insansiTikla(secilecekSik);
                     const optInput = findOptionTextInput(secilecekSik);
                     if (optInput) {
                         await insansiYaz(optInput, "Diğer");
@@ -930,7 +1311,7 @@
                     secilecekSik = secenekler[hedefIndex] || secenekler[secenekler.length - 1];
                 }
                 if (secilecekSik) {
-                    secilecekSik.click();
+                    await insansiTikla(secilecekSik);
                     const optInput = findOptionTextInput(secilecekSik);
                     if (optInput) {
                         await insansiYaz(optInput, "Diğer");
@@ -977,7 +1358,6 @@
             }
             ozelSoruHalledildi = true;
         }
-
     }
 
     const acilirMenuler = document.querySelectorAll('[jsname="LgbsSe"]');
@@ -990,7 +1370,7 @@
 
         const kural = ayarlar.ozelKurallar ? ayarlar.ozelKurallar[soruMetniOriginal] : null;
 
-        menu.click();
+        await insansiTikla(menu);
         await bekle(insansiGecikme(Math.max(150, Math.round(tabanGecikme * 0.2))));
 
         const secenekler = Array.from(document.querySelectorAll('[role="option"]')).filter(opt => opt.getAttribute('data-value') !== "");
@@ -999,14 +1379,14 @@
         let optionClicked = false;
         if (kural && kural.rule !== "default") {
             if (kural.rule === "random") {
-                secenekler[Math.floor(Math.random() * secenekler.length)].click();
+                await insansiTikla(secenekler[Math.floor(Math.random() * secenekler.length)]);
                 optionClicked = true;
             } else {
                 const hedefOptionText = kural.rule;
                 for (const opt of secenekler) {
                     const yazi = opt.innerText ? opt.innerText.trim() : "";
                     if (yazi.toLowerCase().trim() === hedefOptionText.toLowerCase().trim()) {
-                        opt.click();
+                        await insansiTikla(opt);
                         optionClicked = true;
                         break;
                     }
@@ -1016,10 +1396,10 @@
 
         if (!optionClicked) {
             if (sinifMenusuMu || ayarlar.hedefMenu === 'random') {
-                secenekler[Math.floor(Math.random() * secenekler.length)].click();
+                await insansiTikla(secenekler[Math.floor(Math.random() * secenekler.length)]);
             } else {
                 const hedefOpt = secenekler[ayarlar.hedefMenu - 1] || secenekler[secenekler.length - 1];
-                if (hedefOpt) hedefOpt.click();
+                if (hedefOpt) await insansiTikla(hedefOpt);
             }
         }
     }
@@ -1046,5 +1426,36 @@
         }
     }
 
-    if (hedefButon) hedefButon.click();
+    if (hedefButon) {
+        // Watchdog timer'ı geçiş süresi için sıfırla/yenile
+        clearTimeout(watchdogTimer);
+        watchdogTimer = setTimeout(async () => {
+            const data = await chrome.storage.local.get({ botAktif: false });
+            if (data.botAktif) {
+                await sesCal('error');
+                await logEkle("⚠️ Sayfa yanıt vermedi. Yeniden deneniyor...", "err");
+                window.location.replace(window.location.origin + window.location.pathname + "?pli=1&t=" + Date.now());
+            }
+        }, watchdogSuresi);
+
+        await insansiTikla(hedefButon);
+
+        // Tıkladıktan sonra 3 saniye bekle ve doğrulama hatası var mı kontrol et
+        await bekle(3000);
+
+        if (dogrulamaHatasiVarMi()) {
+            if (dogrulamaHataSayaci < 3) {
+                dogrulamaHataSayaci++;
+                await logEkle(`⚠️ Form doğrulama hatası (eksik alan) tespit edildi. Yeniden dolduruluyor... (Deneme ${dogrulamaHataSayaci}/3)`, "err");
+                await formuDoldurVeGonder();
+            } else {
+                await sesCal('error');
+                await logEkle("🚨 Form 3 kez doldurulmasına rağmen gönderilemedi! Bot durduruldu.", "err");
+                await chrome.storage.local.set({ botAktif: false });
+            }
+        }
+    }
+}
+
+await formuDoldurVeGonder();
 })();
