@@ -4,14 +4,15 @@
   "version": "1.2",
   "description": "Google Forms üzerinde otomatik olarak seçenekleri işaretleyen ve her gönderimde kimlik değiştiren tarayıcı uzantısı.",
   "permissions": [
-    "storage", 
-    "tabs", 
-    "notifications", 
+    "storage",
+    "tabs",
+    "notifications",
     "alarms",
     "declarativeNetRequest"
   ],
   "host_permissions": [
-    "*://docs.google.com/*"
+    "*://docs.google.com/*",
+    "http://localhost/*"
   ],
   "icons": {
     "16": "icon.png",
@@ -31,8 +32,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://docs.google.com/forms/*"],
-      "js": ["content.js"]
+      "matches": [
+        "https://docs.google.com/forms/*"
+      ],
+      "js": [
+        "content.js"
+      ]
     }
   ]
 }
