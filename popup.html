@@ -89,8 +89,11 @@
       font-family: 'Space Mono', monospace;
       font-size: 11px;
       padding: 0;
+      margin: 0;
+      overflow-x: hidden;
       overflow-y: auto;
     }
+
 
     .header {
       background: var(--surface);
@@ -224,6 +227,14 @@
       appearance: none;
       -webkit-appearance: none;
       cursor: pointer;
+    }
+
+    select {
+      background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b6b80' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") !important;
+      background-repeat: no-repeat !important;
+      background-position: right 10px center !important;
+      background-size: 12px !important;
+      padding-right: 28px !important;
     }
 
     input[type="text"] {
@@ -397,6 +408,16 @@
       opacity: 0.85;
     }
 
+    .btn:disabled {
+      background: var(--surface2) !important;
+      border: 1px solid var(--border) !important;
+      color: var(--muted) !important;
+      cursor: not-allowed !important;
+      transform: none !important;
+      opacity: 0.6 !important;
+      pointer-events: none !important;
+    }
+
     .btn-primary {
       background: var(--accent);
       color: #fff;
@@ -445,6 +466,10 @@
       display: none !important;
     }
 
+    .right-panel {
+      display: none;
+    }
+
     @media (max-width: 399px) {
       #ozelKurallarBolumu {
         display: none !important;
@@ -461,14 +486,15 @@
       }
 
       body {
-        width: 100% !important;
-        max-width: 900px;
-        min-height: 100vh;
-        padding: 20px;
-        box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
-        border: 1px solid var(--border);
-        border-radius: 8px;
+        width: 800px;
         margin: 20px auto;
+        padding: 20px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        height: auto;
+        overflow-y: auto;
       }
 
       .dashboard-layout {
@@ -482,18 +508,125 @@
       .left-panel {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 16px;
       }
 
       .right-panel {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        background: var(--surface) !important;
-        border: 1px solid var(--border) !important;
-        border-radius: 8px !important;
-        padding: 15px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
         margin-bottom: 0 !important;
+      }
+
+      .settings-card {
+        background: rgba(124, 106, 255, 0.05) !important;
+        padding: 8px !important;
+        border: 1px dashed var(--accent) !important;
+        border-radius: 5px !important;
+        margin-bottom: 5px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 6px !important;
+      }
+
+      .settings-card.sec-dashed {
+        border-color: var(--border) !important;
+      }
+
+      .settings-card.plain-popup {
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        margin-bottom: 0 !important;
+        gap: 10px !important;
+      }
+
+      .settings-card-title {
+        font-size: 9px !important;
+        font-weight: bold !important;
+        color: var(--accent) !important;
+        margin-bottom: 5px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        margin-bottom: 4px !important;
+        border-bottom: 1px solid var(--border) !important;
+        padding-bottom: 6px !important;
+      }
+
+      .settings-card.plain-popup .settings-card-title {
+        display: none !important;
+      }
+
+      @media (min-width: 400px) {
+        .left-panel {
+          gap: 16px !important;
+        }
+
+        .right-panel {
+          gap: 16px !important;
+        }
+
+        .settings-card {
+          background: var(--surface) !important;
+          border: 1px solid var(--border) !important;
+          border-radius: 8px !important;
+          padding: 18px !important;
+          margin-bottom: 0 !important;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+          gap: 14px !important;
+        }
+
+        .settings-card:hover {
+          border-color: rgba(124, 106, 255, 0.3) !important;
+          box-shadow: 0 4px 20px rgba(124, 106, 255, 0.05) !important;
+        }
+
+        .settings-card-title {
+          display: flex !important;
+          align-items: center !important;
+          gap: 8px !important;
+          font-family: 'Syne', sans-serif !important;
+          font-size: 11px !important;
+          font-weight: 700 !important;
+          color: var(--accent) !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.5px !important;
+          margin-bottom: 4px !important;
+          border-bottom: 1px solid var(--border) !important;
+          padding-bottom: 6px !important;
+        }
+
+        .settings-card.plain-popup .settings-card-title {
+          display: flex !important;
+        }
+
+        .stats {
+          gap: 12px !important;
+          background: transparent !important;
+          margin: 10px 0 15px !important;
+          border-bottom: none !important;
+        }
+
+        .stat-cell {
+          background: var(--surface) !important;
+          border: 1px solid var(--border) !important;
+          border-radius: 8px !important;
+          padding: 12px 10px !important;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1) !important;
+        }
+
+        .dashboard-only.btn-row {
+          flex-direction: row !important;
+          gap: 10px !important;
+        }
+
+        .dashboard-only.btn-row .btn {
+          flex: 1 !important;
+        }
       }
 
       #soruKurallariContainer {
@@ -514,9 +647,253 @@
       min-height: 300px !important;
     }
 
-    @media (min-width: 400px) {
-      body.auth-ekrani {
-        min-height: calc(100vh - 40px) !important;
+    /* Removed body.auth-ekrani override */
+
+    /* TICKET SİSTEMİ GÖRSEL SEÇENEKLERİ (MİNİMALİST AKORDİYON GÖRÜNÜMÜ) */
+    .ticket-item {
+      background: transparent !important;
+      border: none !important;
+      border-bottom: 1px solid var(--border) !important;
+      border-radius: 0px !important;
+      padding: 8px 0px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 4px !important;
+      cursor: pointer !important;
+      transition: background 0.2s ease !important;
+      margin-bottom: 0px !important;
+      position: relative !important;
+    }
+
+    .ticket-item:last-child {
+      border-bottom: none !important;
+    }
+
+    .ticket-item:hover {
+      background: rgba(255, 255, 255, 0.02) !important;
+    }
+
+    .ticket-item.expanded {
+      border-bottom-color: var(--accent) !important;
+    }
+
+    .ticket-header {
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      font-size: 8px !important;
+      font-family: 'Space Mono', monospace !important;
+      padding-bottom: 2px !important;
+    }
+
+    .ticket-id {
+      font-weight: bold !important;
+      color: var(--muted) !important;
+    }
+
+    .ticket-date {
+      font-size: 8px !important;
+      color: var(--muted) !important;
+      font-family: 'Space Mono', monospace !important;
+    }
+
+    .ticket-status {
+      font-size: 8px !important;
+      font-weight: bold !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 4px !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.3px !important;
+    }
+
+    .ticket-status.open {
+      color: var(--red) !important;
+    }
+
+    .ticket-status.answered {
+      color: var(--green) !important;
+    }
+
+    .ticket-status.closed {
+      color: var(--muted) !important;
+    }
+
+    .ticket-body {
+      font-size: 10px !important;
+      color: var(--text) !important;
+      font-weight: 500 !important;
+      line-height: 1.4 !important;
+    }
+
+    .ticket-body.collapsed {
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      font-size: 9px !important;
+      color: var(--muted) !important;
+      margin-top: 2px !important;
+    }
+
+    .ticket-details {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 6px !important;
+      margin-top: 4px !important;
+      padding-left: 8px !important;
+      border-left: 2px solid var(--accent) !important;
+      transition: all 0.25s ease !important;
+    }
+
+    .ticket-full-msg {
+      font-size: 9px !important;
+      color: var(--text) !important;
+      white-space: pre-wrap !important;
+      line-height: 1.4 !important;
+      background: transparent !important;
+    }
+
+    .ticket-reply {
+      background: transparent !important;
+      border: none !important;
+      border-top: 1px dashed var(--border) !important;
+      padding: 6px 0 0 0 !important;
+      margin-top: 4px !important;
+      font-size: 9px !important;
+      color: var(--text) !important;
+      line-height: 1.4 !important;
+    }
+
+    .ticket-reply-header {
+      color: var(--accent3) !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 4px !important;
+      font-size: 8px !important;
+      text-transform: uppercase !important;
+      font-weight: bold !important;
+      margin-bottom: 2px !important;
+      letter-spacing: 0.5px !important;
+    }
+
+    /* TICKET FORMU VE SEKMELERİ (MİNİMALİST SEKMELER VE INPUTLAR) */
+    .ticket-tab-btn {
+      background: transparent !important;
+      border: none !important;
+      color: var(--muted) !important;
+      font-family: 'Space Mono', monospace !important;
+      font-size: 8px !important;
+      font-weight: bold !important;
+      text-transform: uppercase !important;
+      padding: 4px 6px !important;
+      cursor: pointer !important;
+      transition: all 0.2s ease !important;
+      border-bottom: 2px solid transparent !important;
+      border-radius: 0px !important;
+    }
+
+    .ticket-tab-btn.active {
+      color: var(--accent) !important;
+      border-bottom-color: var(--accent) !important;
+    }
+
+    .ticket-input {
+      background: var(--surface2) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 5px !important;
+      color: var(--text) !important;
+      font-family: 'Space Mono', monospace !important;
+      font-size: 10px !important;
+      padding: 7px 9px !important;
+      outline: none !important;
+      transition: border-color 0.2s ease !important;
+      margin: 0 !important;
+      width: 100%;
+    }
+
+    .ticket-input:focus {
+      border-color: var(--accent) !important;
+    }
+
+    .ticket-textarea {
+      height: 50px !important;
+      resize: none !important;
+    }
+
+    .ticket-submit-btn {
+      background: transparent !important;
+      border: 1px solid var(--accent) !important;
+      color: var(--accent) !important;
+      font-family: 'Space Mono', monospace !important;
+      font-size: 9px !important;
+      font-weight: bold !important;
+      text-transform: uppercase !important;
+      padding: 6px 12px !important;
+      border-radius: 0px !important;
+      cursor: pointer !important;
+      transition: all 0.2s ease !important;
+      margin-top: 4px !important;
+      width: 100% !important;
+    }
+
+    .ticket-submit-btn:hover {
+      background: var(--accent) !important;
+      color: #000 !important;
+    }
+
+    /* Sohbet Balonları */
+    .chat-bubble-wrapper {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+    
+    .chat-bubble {
+      max-width: 85%;
+      padding: 6px 10px;
+      border-radius: 10px;
+      font-size: 8px;
+      line-height: 1.3;
+      word-break: break-word;
+      margin-bottom: 2px;
+      position: relative;
+    }
+    
+    .chat-bubble.user {
+      align-self: flex-end;
+      background: var(--accent);
+      color: #fff;
+      border-bottom-right-radius: 2px;
+    }
+    
+    .chat-bubble.admin {
+      align-self: flex-start;
+      background: var(--surface2);
+      color: var(--text);
+      border-bottom-left-radius: 2px;
+      border: 1px solid var(--border);
+    }
+    
+    .chat-bubble-time {
+      font-size: 6px;
+      color: var(--muted);
+      margin-top: 2px;
+      display: block;
+      text-align: right;
+    }
+    
+    .chat-bubble.admin .chat-bubble-time {
+      text-align: left;
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0) scale(1);
+        filter: drop-shadow(0 0 5px rgba(255, 167, 38, 0.4));
+      }
+      50% {
+        transform: translateY(-8px) scale(1.05);
+        filter: drop-shadow(0 0 15px rgba(255, 167, 38, 0.8));
       }
     }
   </style>
@@ -524,48 +901,94 @@
 
 <body>
 
-  <!-- ŞİFRE KİLİT EKRANI -->
-  <div id="kilidEkrani"
-    style="display: none; width: 280px; min-height: 300px; background: var(--bg); flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 40px 0;">
-    <div
-      style="font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--accent); letter-spacing: -1px;">
-      🔒</div>
-    <div style="font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--text);">Form Bot
-      Kilitli</div>
-    <div style="font-size: 9px; color: var(--muted); text-align: center; max-width: 200px;">Devam Etmek İçin Şifrenizi
-      Girin</div>
-    <input type="password" id="kilidSifreInput" placeholder="Şifren" maxlength="20"
-      style="width: 160px; text-align: center; background: var(--surface2); border: 2px solid var(--border); color: var(--text); font-family: 'Space Mono', monospace; font-size: 14px; padding: 10px; border-radius: 8px; outline: none; transition: border-color 0.2s; letter-spacing: 3px;">
-    <button id="kilidAcBtn" class="btn btn-primary"
-      style="width: 160px; padding: 9px; font-size: 11px; border-radius: 8px;">KİLİDİ AÇ</button>
-    <div id="kilidHataMesaji" style="font-size: 9px; color: var(--red); min-height: 14px;"></div>
-  </div>
+  <div id="content-dashboard" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+      
+      <!-- ŞİFRE KİLİT EKRANI -->
+      <div id="kilidEkrani"
+        style="display: none; width: 280px; min-height: 300px; background: var(--bg); flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 40px 0;">
+        <div
+          style="font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--accent); letter-spacing: -1px;">
+          🔒</div>
+        <div style="font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--text);">Form Bot
+          Kilitli</div>
+        <div style="font-size: 9px; color: var(--muted); text-align: center; max-width: 200px;">Devam Etmek İçin Şifrenizi
+          Girin</div>
+        <input type="password" id="kilidSifreInput" placeholder="Şifren" maxlength="20"
+          style="width: 160px; text-align: center; background: var(--surface2); border: 2px solid var(--border); color: var(--text); font-family: 'Space Mono', monospace; font-size: 14px; padding: 10px; border-radius: 8px; outline: none; transition: border-color 0.2s; letter-spacing: 3px;">
+        <button id="kilidAcBtn" class="btn btn-primary"
+          style="width: 160px; padding: 9px; font-size: 11px; border-radius: 8px;">KİLİDİ AÇ</button>
+        <div id="kilidHataMesaji" style="font-size: 9px; color: var(--red); min-height: 14px;"></div>
+      </div>
 
-  <!-- ŞİFRE KURULUM EKRANI -->
-  <div id="sifreKurulumEkrani"
-    style="display: none; width: 280px; min-height: 300px; background: var(--bg); flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 40px 0;">
-    <div
-      style="font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--accent3); letter-spacing: -1px;">
-      🛡️</div>
-    <div style="font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--text);">Şifre Belirle
-    </div>
-    <div style="font-size: 9px; color: var(--muted); text-align: center; max-width: 200px;">Ayarlarınızı Korumak İçin
-      Bir Şifre Oluşturun</div>
-    <input type="password" id="yeniSifreInput" placeholder="Yeni Şifre" maxlength="20"
-      style="width: 160px; text-align: center; background: var(--surface2); border: 2px solid var(--border); color: var(--text); font-family: 'Space Mono', monospace; font-size: 14px; padding: 10px; border-radius: 8px; outline: none; transition: border-color 0.2s; letter-spacing: 3px;">
-    <input type="password" id="yeniSifreTekrarInput" placeholder="Tekrar..." maxlength="20"
-      style="width: 160px; text-align: center; background: var(--surface2); border: 2px solid var(--border); color: var(--text); font-family: 'Space Mono', monospace; font-size: 14px; padding: 10px; border-radius: 8px; outline: none; transition: border-color 0.2s; letter-spacing: 3px;">
-    <button id="sifreKaydetBtn" class="btn btn-primary"
-      style="width: 160px; padding: 9px; font-size: 11px; border-radius: 8px; background: var(--accent3); color: #000;">ŞİFRE
-      OLUŞTUR</button>
-    <button id="sifreAtlaBtn"
-      style="background: transparent; border: none; color: var(--muted); font-family: 'Space Mono', monospace; font-size: 9px; cursor: pointer; text-decoration: underline;">Şifresiz
-      devam et</button>
-    <div id="kurulumHataMesaji" style="font-size: 9px; color: var(--red); min-height: 14px;"></div>
-  </div>
+      <!-- ŞİFRE KURULUM EKRANI -->
+      <div id="sifreKurulumEkrani"
+        style="display: none; width: 280px; min-height: 300px; background: var(--bg); flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 40px 0;">
+        <div
+          style="font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--accent3); letter-spacing: -1px;">
+          🛡️</div>
+        <div style="font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--text);">Şifre Belirle
+        </div>
+        <div style="font-size: 9px; color: var(--muted); text-align: center; max-width: 200px;">Ayarlarınızı Korumak İçin
+          Bir Şifre Oluşturun</div>
+        <input type="password" id="yeniSifreInput" placeholder="Yeni Şifre" maxlength="20"
+          style="width: 160px; text-align: center; background: var(--surface2); border: 2px solid var(--border); color: var(--text); font-family: 'Space Mono', monospace; font-size: 14px; padding: 10px; border-radius: 8px; outline: none; transition: border-color 0.2s; letter-spacing: 3px;">
+        <input type="password" id="yeniSifreTekrarInput" placeholder="Tekrar..." maxlength="20"
+          style="width: 160px; text-align: center; background: var(--surface2); border: 2px solid var(--border); color: var(--text); font-family: 'Space Mono', monospace; font-size: 14px; padding: 10px; border-radius: 8px; outline: none; transition: border-color 0.2s; letter-spacing: 3px;">
+        <button id="sifreKaydetBtn" class="btn btn-primary"
+          style="width: 160px; padding: 9px; font-size: 11px; border-radius: 8px; background: var(--accent3); color: #000;">ŞİFRE
+          OLUŞTUR</button>
+        <button id="sifreAtlaBtn"
+          style="background: transparent; border: none; color: var(--muted); font-family: 'Space Mono', monospace; font-size: 9px; cursor: pointer; text-decoration: underline;">Şifresiz
+          devam et</button>
+        <div id="kurulumHataMesaji" style="font-size: 9px; color: var(--red); min-height: 14px;"></div>
+      </div>
 
-  <!-- ANA İÇERİK -->
-  <div id="mainContent">
+      <!-- LİSANS AKTİVASYON EKRANI -->
+      <div id="lisansAktivasyonEkrani"
+        style="display: none; width: 280px; min-height: 300px; background: var(--bg); flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 40px 0;">
+        <div
+          style="font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--accent); letter-spacing: -1px;">
+          🔑</div>
+        <div style="font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--text);">Lisans
+          Aktivasyonu</div>
+        <div style="font-size: 9px; color: var(--muted); text-align: center; max-width: 220px;">Uzantıyı Kullanmak İçin
+          Lisans Anahtarınızı Girin</div>
+        <input type="text" id="lisansKeyInput" placeholder="XXXX-XXXX-XXXX-XXXX" maxlength="35"
+          style="width: 200px; text-align: center; background: var(--surface2); border: 2px solid var(--border); color: var(--text); font-family: 'Space Mono', monospace; font-size: 11px; padding: 10px; border-radius: 8px; outline: none; transition: border-color 0.2s; text-transform: uppercase;">
+        <button id="lisansAktiveEtBtn" class="btn btn-primary"
+          style="width: 200px; padding: 9px; font-size: 11px; border-radius: 8px;">LİSANSI AKTİVE ET</button>
+        <div id="lisansHataMesaji"
+          style="font-size: 9px; color: var(--red); min-height: 14px; text-align: center; max-width: 220px;"></div>
+        <button id="lisansAtlaBtn"
+          style="background: transparent; border: none; color: var(--muted); font-family: 'Space Mono', monospace; font-size: 9px; cursor: pointer; text-decoration: underline; margin-top: 5px;">Ücretsiz
+          Sürümle Devam Et (6 Saatte 20 Limit)</button>
+      </div>
+
+      <!-- GÜNCELLEME GEREKLİ EKRANI -->
+      <div id="guncellemeEkrani"
+        style="display: none; width: 280px; min-height: 300px; background: var(--bg); flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 40px 0;">
+        <div
+          style="font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--red); letter-spacing: -1px;">
+          🔄</div>
+        <div style="font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--text);">Güncelleme Gerekli</div>
+        <div id="guncellemeMetni" style="font-size: 9px; color: var(--muted); text-align: center; max-width: 220px; line-height: 1.4;">Uzantınızın sürümü eski! Güvenli ve kararlı çalışma için güncellemeniz zorunludur.</div>
+        <a id="guncellemeIndirBtn" href="#" target="_blank" class="btn btn-primary"
+          style="width: 200px; padding: 9px; font-size: 11px; border-radius: 8px; text-decoration: none; text-align: center; line-height: 1.2; display: inline-block; background: var(--accent); color: #fff;">GÜNCEL SÜRÜMÜ İNDİR ⚡</a>
+      </div>
+
+      <!-- VIP HOŞ GELDİN SÜRPRİZ EKRANI -->
+      <div id="vipWelcomeEkrani"
+        style="display: none; width: 280px; min-height: 300px; background: var(--bg); flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 40px 0; opacity: 1; transition: opacity 0.4s ease;">
+        <div
+          style="font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; color: #ffa726; letter-spacing: -1px; animation: float 2s ease-in-out infinite;">
+          ⭐</div>
+        <div style="font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: #ffa726; text-transform: uppercase; letter-spacing: 0.5px;">Hoş Geldin</div>
+        <div id="vipWelcomeName" style="font-family: 'Syne', sans-serif; font-size: 16px; font-weight: bold; color: #fff; text-align: center; max-width: 240px; word-break: break-word;">⭐ VIP (Alper)</div>
+        <div style="font-size: 8px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 8px;">Premium Panel Yükleniyor...</div>
+      </div>
+
+      <!-- ANA İÇERİK -->
+      <div id="mainContent" style="width: 100%; display: flex; flex-direction: column;">
 
     <div class="header" style="display: flex; justify-content: space-between; align-items: center;">
       <div>
@@ -576,16 +999,19 @@
         <div class="header-sub">Kontrol Paneli</div>
       </div>
       <button id="sekmedeAcBtn"
-        style="background: rgba(124,106,255,0.12); border: 1px solid rgba(124,106,255,0.3); color: var(--accent3); font-family: 'Space Mono', monospace; font-size: 8px; padding: 4px 8px; border-radius: 4px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: background 0.2s;">🖥️
+        style="background: rgba(124,106,255,0.12); border: 1px solid rgba(124,106,255,0.3); color: var(--accent3); font-family: 'Space Mono', monospace; font-size: 7.5px; padding: 3px 6px; border-radius: 4px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: background 0.2s; margin-right: 4px;">🌐
         Geniş Ekran</button>
     </div>
 
     <div
       style="background: var(--surface2); padding: 8px 14px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span id="levelBadge"
-          style="font-size: 11px; font-weight: bold; color: var(--accent); background: var(--surface); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border);">Lvl
-          1</span>
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <span id="levelBadge"
+            style="font-size: 11px; font-weight: bold; color: var(--accent); background: var(--surface); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border);">Lvl
+            1</span>
+          <span id="vipBadge" style="display: none; font-size: 8px; font-weight: bold; color: #ffa726; background: rgba(255, 167, 38, 0.08); border: 1px solid rgba(255, 167, 38, 0.2); padding: 2px 5px; border-radius: 4px; font-family: 'Space Mono', monospace; vertical-align: middle;">⭐ VIP</span>
+        </div>
         <span id="titleBadge"
           style="font-family: 'Syne', sans-serif; font-size: 11px; font-weight: bold; color: var(--text);">Çaylak
           Botçu</span>
@@ -596,6 +1022,23 @@
         <div id="xpBarFill"
           style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent2), var(--accent)); transition: width 0.3s ease;">
         </div>
+      </div>
+      <!-- Lisans Durumu -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px; font-size: 8px;">
+        <span style="color: var(--muted);">Lisans Durumu:</span>
+        <span id="lisansSureBadge" style="color: var(--green); font-weight: bold;">Doğrulanıyor...</span>
+      </div>
+      <!-- İstemci Kimliği -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px; font-size: 8px;">
+        <span style="color: var(--muted);">Cihaz Kimliği:</span>
+        <span id="clientIdLabel" style="color: var(--muted); cursor: pointer; text-decoration: underline;"
+          title="Kopyalamak için tıkla">Yükleniyor...</span>
+      </div>
+      <!-- Cihaz Adı (Etiket) -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 3px; font-size: 8px;">
+        <span style="color: var(--muted);">Cihaz Adı (Etiket):</span>
+        <input type="text" id="deviceNameInput" placeholder="Cihaz etiketi girin (Örn: Ahmet)..."
+          style="width: 130px; font-size: 8px; padding: 2px 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 3px; color: var(--text); font-family: 'Space Mono', monospace; text-align: right; height: 16px; margin: 0; outline: none;">
       </div>
     </div>
 
@@ -686,123 +1129,205 @@
               style="font-size: 11px; padding: 10px; margin-bottom: 5px; transition: 0.3s;"></button>
           </div>
 
-          <div class="field">
+          <div class="field dashboard-only">
             <label>İşlem Geçmişi</label>
             <div class="log-box" id="logBox"></div>
           </div>
-          <hr class="divider dashboard-only">
 
-          <div class="field dashboard-only"
-            style="background: rgba(124,106,255,0.05); padding: 8px; border: 1px dashed var(--accent); border-radius: 5px;">
-            <label style="color: var(--accent); font-weight: bold; margin-bottom: 5px; display: block;">Şablon
-              Yönetimi</label>
+          <!-- Şablon Yönetimi -->
+          <div class="settings-card field dashboard-only">
+            <div class="settings-card-title">📁 Şablon Yönetimi</div>
             <span id="aktifSablonText"
-              style="font-size: 8px; color: var(--muted); margin-bottom: 6px; display: block;">Aktif Şablon: Yok</span>
-            <div style="display: flex; gap: 4px; margin-bottom: 4px;">
-              <select id="sablonSecici" style="flex: 1; padding: 5px; font-size: 10px;">
+              style="font-size: 9px; color: var(--muted); margin-top: -4px; margin-bottom: 2px; display: block;">Aktif Şablon: Yok</span>
+            
+            <!-- Şablon Seçimi ve Eylemler -->
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <select id="sablonSecici" style="font-size: 10px; padding: 6px 8px;">
                 <option value="">-- Şablon Seç --</option>
               </select>
-              <button class="btn btn-primary" id="sablonYukleBtn"
-                style="padding: 5px; font-size: 9px; flex: 0.3;">YÜKLE</button>
-              <button class="btn btn-reset" id="sablonSilBtn"
-                style="padding: 5px; font-size: 9px; flex: 0.3; border-color: var(--red); color: var(--red);">SİL</button>
-            </div>
-            <div style="display: flex; gap: 4px;">
-              <input type="text" id="yeniSablonAdi" placeholder="Şablon adı..."
-                style="flex: 1; padding: 5px; font-size: 10px;">
-              <button class="btn btn-primary" id="sablonKaydetBtn"
-                style="padding: 5px; font-size: 9px; flex: 0.6; background: var(--green); color: #000;">KAYDET</button>
-            </div>
-          </div>
-
-          <hr class="divider dashboard-only">
-
-          <div class="field">
-            <label class="dashboard-only">Hedef Form Linki</label>
-            <input type="text" id="hedefLinkInput" class="dashboard-only"
-              placeholder="https://docs.google.com/forms/...">
-            <button class="btn btn-primary" id="formTaraBtn"
-              style="font-size: 9px; padding: 6px; margin-top: 5px; background: var(--accent); color: #fff; box-shadow: none; transition: 0.2s;">🔍
-              AKTİF SEKMEYİ TARA VE KURALLARI YÜKLE</button>
-          </div>
-
-          <hr class="divider dashboard-only">
-
-          <div class="field dashboard-only">
-            <div class="delay-row">
-              <label>Gecikme Süresi</label>
-              <span class="delay-badge" id="delayBadge">500 ms</span>
-            </div>
-            <div class="slider-wrap">
-              <div class="slider-track">
-                <div class="slider-fill" id="sliderFill" style="width:16.6%"></div>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn btn-primary" id="sablonYukleBtn" style="padding: 6px; font-size: 9px; flex: 1;">Şablonu Yükle</button>
+                <button class="btn btn-reset" id="sablonSilBtn" style="padding: 6px; font-size: 9px; flex: 1; border-color: var(--red); color: var(--red);">Şablonu Sil</button>
               </div>
-              <input type="range" id="delaySlider" min="200" max="3000" step="100" value="500">
+            </div>
+            
+            <div style="border-top: 1px dashed var(--border); margin: 6px 0;"></div>
+            
+            <!-- Yeni Şablon Kaydetme -->
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <input type="text" id="yeniSablonAdi" placeholder="Yeni şablon adı girin..." style="font-size: 10px; padding: 6px 8px;">
+              <button class="btn btn-primary" id="sablonKaydetBtn" style="padding: 6px; font-size: 9px; background: var(--green); color: #000;">Yeni Şablon Kaydet</button>
             </div>
           </div>
 
-          <hr class="divider dashboard-only">
+          <!-- GERİ BİLDİRİM & DESTEK (TICKET SİSTEMİ) -->
+          <div class="settings-card field dashboard-only sec-dashed">
+            <div class="settings-card-title" style="display: flex; justify-content: space-between; align-items: center; width: 100%; border-bottom: none; padding-bottom: 0; margin-bottom: 0;">
+              <span id="destekTitleLabel">✉️ Destek & Ticket</span>
+              <div style="display: flex; gap: 4px;">
+                <button id="ticketYeniTabBtn" class="ticket-tab-btn active">Talep Aç</button>
+                <button id="ticketListeTabBtn" class="ticket-tab-btn">Taleplerim <span id="ticketCountBadge">(0)</span></button>
+              </div>
+            </div>
+            
+            <!-- Yeni Talep Oluşturma Görünümü -->
+            <div id="ticketYeniBolumu" style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+              <input type="text" id="feedbackEmailInput" placeholder="Gmail adresiniz..." class="ticket-input">
+              <textarea id="feedbackMsgInput" placeholder="Hata veya görüşünüzü yazın..." class="ticket-input ticket-textarea"></textarea>
+              <button class="ticket-submit-btn" id="feedbackGonderBtn">TALEP OLUŞTUR 🚀</button>
+              <div id="feedbackHataMesaji" style="font-size: 8px; text-align: center; min-height: 10px;"></div>
+            </div>
 
-          <div class="field dashboard-only">
-            <label>Hedef Gönderim Sayısı (Max 50)</label>
-            <input type="number" id="hedefAdetInput" value="10" min="1" max="50">
-          </div>
+            <!-- Taleplerim Listesi Görünümü -->
+            <div id="ticketListeBolumu" style="display: none; flex-direction: column; gap: 6px; margin-top: 8px; max-height: 150px; overflow-y: auto; padding-right: 2px;">
+              <div id="ticketListeContainer" style="display: flex; flex-direction: column; gap: 6px;">
+                <div style="font-size: 8px; color: var(--muted); text-align: center; padding: 10px 0;">Yükleniyor...</div>
+              </div>
+            </div>
 
-          <div class="field dashboard-only" style="margin-bottom: 5px;">
-            <label>Ses Efektleri</label>
-            <select id="sesSecici">
-              <option value="acik">🔊 Sesler Açık</option>
-              <option value="kapali">🔇 Sessiz</option>
-            </select>
-          </div>
-
-          <hr class="divider dashboard-only">
-
-          <div class="field dashboard-only" style="margin-bottom: 5px;">
-            <label>Görünüm Seçimi</label>
-            <select id="temaSecici">
-              <option value="karanlik">Karanlık (Varsayılan)</option>
-              <option value="aydinlik">Aydınlık Tema</option>
-              <option value="cyberpunk">Cyberpunk Neon</option>
-              <option value="matrix" id="optMatrix" disabled>Matrix Hacker 🔒 (Lvl 3)</option>
-              <option value="prestige" id="optPrestige" disabled>Prestige Gold 🔒 (Lvl 5)</option>
-            </select>
-          </div>
-
-          <div class="btn-row dashboard-only">
-            <button class="btn btn-primary" id="kaydetBtn">AYARLARI UYGULA</button>
-            <button class="btn btn-reset" id="sifirlaBtn">Tüm Verileri Sıfırla</button>
-          </div>
-
-          <hr class="divider dashboard-only">
-
-          <!-- ŞİFRE YÖNETİMİ -->
-          <div class="field dashboard-only" id="sifreYonetimBolumu" style="margin-bottom: 5px;">
-            <label>🔒 Şifre Koruması</label>
-            <div id="sifreDurumMetni" style="font-size: 8px; color: var(--muted); margin-bottom: 4px;">Şifre: Aktif
-              Değil</div>
-            <div style="display: flex; gap: 4px;">
-              <button class="btn btn-primary" id="sifreDegistirBtn" style="padding: 5px; font-size: 9px; flex: 1;">🔑
-                Şifre Değiştir</button>
-              <button class="btn btn-reset" id="sifreKaldirBtn"
-                style="padding: 5px; font-size: 9px; flex: 1; border-color: var(--red); color: var(--red);">🗑️ Şifreyi
-                Kaldır</button>
+            <!-- Sohbet Görünümü -->
+            <div id="ticketChatBolumu" style="display: none; flex-direction: column; gap: 6px; margin-top: 8px;">
+              <div id="ticketChatHeader" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 4px; margin-bottom: 2px;">
+                <button id="ticketChatBackBtn" class="ticket-tab-btn" style="padding: 2px 4px; font-size: 8px; margin: 0; display: inline-flex; align-items: center; gap: 2px;">← Geri</button>
+                <span id="ticketChatTitle" style="font-size: 8px; font-weight: bold; font-family: 'Space Mono', monospace; color: var(--muted);">Talep #0</span>
+                <span id="ticketChatStatus" class="ticket-status open" style="font-size: 8px;">● Açık</span>
+              </div>
+              <div id="ticketChatMessages" style="display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; padding: 6px; background: rgba(0, 0, 0, 0.15); border-radius: 4px; border: 1px solid var(--border);">
+                <!-- Sohbet balonları dinamik eklenecek -->
+              </div>
+              <div id="ticketChatInputArea" style="display: flex; gap: 4px; align-items: flex-end; margin-top: 2px;">
+                <textarea id="ticketChatReplyInput" placeholder="Mesajınızı yazın... (Enter ile gönder)" class="ticket-input ticket-textarea" style="height: 28px !important; font-size: 8px; flex: 1; margin: 0;"></textarea>
+                <button id="ticketChatReplyBtn" class="ticket-submit-btn" style="width: auto !important; height: 28px; line-height: 26px; padding: 0 8px; margin: 0; flex: 0 0 auto;">GÖNDER</button>
+              </div>
+              <div id="ticketChatClosedMsg" style="display: none; font-size: 8px; color: var(--muted); text-align: center; padding: 6px 0; background: rgba(255, 255, 255, 0.02); border: 1px dashed var(--border); border-radius: 4px;">
+                🔒 Bu destek talebi kapatılmıştır.
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Soru Kuralları -->
-        <div class="right-panel" id="ozelKurallarBolumu" style="display:none; margin-bottom: 5px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-            <label style="color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px;">Soruya
-              Özel Kurallar</label>
-            <span class="delay-badge"
-              style="font-size: 8px; color: var(--accent2); background: rgba(255,106,106,0.05); padding: 1px 6px; border-radius: 4px; border: 1px solid rgba(255,106,106,0.15); cursor: pointer;"
-              id="kurallariTemizleBtn">Temizle</span>
+        <div class="right-panel">
+          <!-- Temel Ayarlar -->
+          <div class="settings-card field plain-popup">
+            <div class="settings-card-title">⚙️ Temel Ayarlar</div>
+            
+            <div class="field dashboard-only" style="display: flex; flex-direction: column; gap: 4px;">
+              <label>Hedef Form Linki</label>
+              <input type="text" id="hedefLinkInput" placeholder="https://docs.google.com/forms/... veya boş bırakın">
+            </div>
+            
+            <button class="btn btn-primary" id="formTaraBtn"
+              style="font-size: 9.5px; padding: 8px; margin-top: 4px; background: var(--accent); color: #fff; box-shadow: none; transition: 0.2s;">🔍
+              AKTİF SEKMEYİ TARA VE KURALLARI YÜKLE</button>
+
+            <div class="dashboard-only" style="display: flex; flex-direction: column; gap: 4px;">
+              <div class="delay-row">
+                <label>Gecikme Süresi</label>
+                <span class="delay-badge" id="delayBadge">500 ms</span>
+              </div>
+              <div class="slider-wrap">
+                <div class="slider-track">
+                  <div class="slider-fill" id="sliderFill" style="width:16.6%"></div>
+                </div>
+                <input type="range" id="delaySlider" min="200" max="3000" step="100" value="500">
+              </div>
+              <div id="delaySpeedNote" style="font-size: 7px; color: var(--muted); margin-top: 2px; font-family: 'Space Mono', monospace;"></div>
+            </div>
+
+            <div class="dashboard-only" style="display: flex; flex-direction: column; gap: 4px;">
+              <label>Hedef Gönderim Sayısı (Max 50)</label>
+              <input type="number" id="hedefAdetInput" value="10" min="1" max="50">
+            </div>
           </div>
-          <div id="soruKurallariContainer"
-            style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; padding: 6px; border: 1px dashed var(--border); border-radius: 5px; background: rgba(0,0,0,0.15);">
-            <!-- Dinamik sorular buraya gelecek -->
+
+          <!-- Soru Kuralları -->
+          <div class="settings-card field" id="ozelKurallarBolumu" style="display:none; margin-bottom: 5px;">
+            <div class="settings-card-title" style="display: flex; justify-content: space-between; align-items: center; width: 100%; border-bottom: none; padding-bottom: 0; margin-bottom: 0;">
+              <span>📋 Soruya Özel Kurallar</span>
+              <span class="delay-badge"
+                style="font-size: 8px; color: var(--accent2); background: rgba(255,106,106,0.05); padding: 1px 6px; border-radius: 4px; border: 1px solid rgba(255,106,106,0.15); cursor: pointer; text-transform: none; letter-spacing: 0;"
+                id="kurallariTemizleBtn">Temizle</span>
+            </div>
+            <div id="soruKurallariContainer"
+              style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; padding: 6px; border: 1px dashed var(--border); border-radius: 5px; background: rgba(0,0,0,0.15); margin-top: 8px;">
+              <!-- Dinamik sorular buraya gelecek -->
+            </div>
+          </div>
+
+          <!-- İNSANSI DAVRANIŞ SİMÜLATÖRÜ -->
+          <div class="settings-card field dashboard-only">
+            <div class="settings-card-title">🖱️ İnsansı Mod Simülatörü</div>
+
+            <div style="display: flex; gap: 4px; align-items: center; margin-bottom: 2px;">
+              <select id="insansiModSecici" style="flex: 1; padding: 5px; font-size: 10px;">
+                <option value="kapali">❌ İnsansı Mod Kapalı</option>
+                <option value="acik">✅ İnsansı Mod Aktif</option>
+              </select>
+            </div>
+
+            <div id="insansiAltAyarlar" style="display: none; flex-direction: column; gap: 6px; padding: 4px 0 2px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <input type="checkbox" id="insansiFareCb" checked style="cursor: pointer; width: 12px; height: 12px;">
+                <label for="insansiFareCb"
+                  style="font-size: 9px; cursor: pointer; text-transform: none; letter-spacing: 0;">Görsel Fare İmleci
+                  Hareketi</label>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <input type="checkbox" id="insansiHataCb" checked style="cursor: pointer; width: 12px; height: 12px;">
+                <label for="insansiHataCb"
+                  style="font-size: 9px; cursor: pointer; text-transform: none; letter-spacing: 0;">Yazım Hataları ve
+                  Düzeltme</label>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <input type="checkbox" id="insansiKaydirCb" checked style="cursor: pointer; width: 12px; height: 12px;">
+                <label for="insansiKaydirCb"
+                  style="font-size: 9px; cursor: pointer; text-transform: none; letter-spacing: 0;">Yumuşak Sayfa
+                  Kaydırma (Scroll)</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- SİSTEM AYARLARI (Ses, Tema, Şifre) -->
+          <div class="settings-card field dashboard-only">
+            <div class="settings-card-title">🛠️ Sistem Ayarları</div>
+
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <label>Ses Efektleri</label>
+              <select id="sesSecici">
+                <option value="acik">🔊 Sesler Açık</option>
+                <option value="kapali">🔇 Sessiz</option>
+              </select>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
+              <label>Görünüm Seçimi</label>
+              <select id="temaSecici">
+                <option value="karanlik">Karanlık (Varsayılan)</option>
+                <option value="aydinlik">Aydınlık Tema</option>
+                <option value="cyberpunk">Cyberpunk Neon</option>
+                <option value="matrix" id="optMatrix" disabled>Matrix Hacker 🔒 (Lvl 3)</option>
+                <option value="prestige" id="optPrestige" disabled>Prestige Gold 🔒 (Lvl 5)</option>
+              </select>
+            </div>
+
+            <!-- ŞİFRE YÖNETİMİ -->
+            <div id="sifreYonetimBolumu" style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;">
+              <label>🔒 Şifre Koruması</label>
+              <div id="sifreDurumMetni" style="font-size: 9px; color: var(--muted); margin-bottom: 2px;">Şifre: Aktif Değil</div>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn btn-primary" id="sifreDegistirBtn" style="padding: 6px; font-size: 9px; flex: 1;">🔑 Şifre Değiştir</button>
+                <button class="btn btn-reset" id="sifreKaldirBtn"
+                  style="padding: 6px; font-size: 9px; flex: 1; border-color: var(--red); color: var(--red);">🗑️ Şifreyi Kaldır</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- UYGULA / SIFIRLA BUTONLARI -->
+          <div class="btn-row dashboard-only" style="margin-bottom: 6px;">
+            <button class="btn btn-primary" id="kaydetBtn">AYARLARI UYGULA</button>
+            <button class="btn btn-reset" id="sifirlaBtn">Tüm Verileri Sıfırla</button>
           </div>
         </div>
 
@@ -810,8 +1335,8 @@
     </div>
 
     <div class="status-bar" id="durumMetni">Hazır</div>
-
   </div>
+
 
   <script src="popup.js"></script>
 </body>
