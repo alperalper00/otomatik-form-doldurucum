@@ -1,36 +1,333 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Önce şifre durumunu kontrol et
-    chrome.storage.local.get({ panelSifresi: '', sifreIlkKurulum: true, tema: 'karanlik' }, (sifreData) => {
+    chrome.storage.local.get({ panelSifresi: '', sifreIlkKurulum: true, tema: 'karanlik', lisansDurumu: false }, (sifreData) => {
         // Temayı her durumda uygula (kilit ekranı da doğru temada görünsün)
         document.documentElement.setAttribute('data-theme', sifreData.tema);
 
-        if (sifreData.panelSifresi) {
-            // Şifre var → Kilit ekranını göster
+        if (sifreData.lisansDurumu && sifreData.panelSifresi) {
+            // Şifre var ve premium → Kilit ekranını göster
             document.body.classList.add('auth-ekrani');
             document.getElementById('kilidEkrani').style.display = 'flex';
             document.getElementById('mainContent').style.display = 'none';
             document.getElementById('sifreKurulumEkrani').style.display = 'none';
             document.getElementById('kilidSifreInput').focus();
-        } else if (sifreData.sifreIlkKurulum) {
-            // İlk kullanım → Şifre kurulum ekranını göster
+        } else if (sifreData.lisansDurumu && sifreData.sifreIlkKurulum) {
+            // İlk kullanım ve premium → Şifre kurulum ekranını göster
             document.body.classList.add('auth-ekrani');
             document.getElementById('sifreKurulumEkrani').style.display = 'flex';
             document.getElementById('mainContent').style.display = 'none';
             document.getElementById('kilidEkrani').style.display = 'none';
             document.getElementById('yeniSifreInput').focus();
         } else {
-            // Şifre yok ve atlanmış → Direkt aç
+            // Şifre yok, atlanmış veya ücretsiz sürüm → Direkt aç
             sifreDogrulandi();
         }
     });
+
 });
 
+const LIMIT_SURESI_MS = 6 * 60 * 60 * 1000; // 6 saat (6 * 60 * 60 * 1000)
+console.log("[Form Bot Popup] Aktif Limit Süresi MS: " + LIMIT_SURESI_MS);
+const API_URL = 'http://localhost/backend/verify.php';
+
 function sifreDogrulandi() {
-    document.body.classList.remove('auth-ekrani');
+    // Şifre ekranlarını gizle
     document.getElementById('kilidEkrani').style.display = 'none';
     document.getElementById('sifreKurulumEkrani').style.display = 'none';
-    document.getElementById('mainContent').style.display = 'block';
 
+    // Önce client_id ve lisansAnahtari al/üret
+    chrome.storage.local.get({ clientId: '', lisansAnahtari: '' }, (data) => {
+        let clientId = data.clientId;
+        if (!clientId) {
+            clientId = 'cl_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            chrome.storage.local.set({ clientId: clientId });
+        }
+
+        if (!data.lisansAnahtari) {
+            // Lisans yok → Aktivasyon ekranını göster
+            document.body.classList.add('auth-ekrani');
+            document.getElementById('mainContent').style.display = 'none';
+            document.getElementById('lisansAktivasyonEkrani').style.display = 'flex';
+            document.getElementById('lisansKeyInput').focus();
+            
+            // Aktivasyon butonu dinleyicisi
+            setupLicenseActivationListener(clientId);
+        } else {
+            // Lisans var → Sunucuda sorgula
+            verifyLicenseOnServer(data.lisansAnahtari, clientId);
+        }
+    });
+}
+
+function handleVersionCheckResponse(data) {
+    if (data && data.status === 'update_required') {
+        document.body.classList.add('auth-ekrani');
+        document.getElementById('kilidEkrani').style.display = 'none';
+        document.getElementById('sifreKurulumEkrani').style.display = 'none';
+        document.getElementById('lisansAktivasyonEkrani').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'none';
+        
+        const guncellemeEkrani = document.getElementById('guncellemeEkrani');
+        if (guncellemeEkrani) {
+            guncellemeEkrani.style.display = 'flex';
+        }
+        
+        const guncellemeMetni = document.getElementById('guncellemeMetni');
+        if (guncellemeMetni && data.message) {
+            guncellemeMetni.textContent = data.message;
+        }
+        
+        const guncellemeIndirBtn = document.getElementById('guncellemeIndirBtn');
+        if (guncellemeIndirBtn && data.update_url) {
+            guncellemeIndirBtn.href = data.update_url;
+        }
+        return true;
+    }
+    return false;
+}
+
+function verifyLicenseOnServer(licenseKey, clientId) {
+    const badge = document.getElementById('lisansSureBadge');
+    if (badge) {
+        badge.textContent = 'Doğrulanıyor...';
+        badge.style.color = 'var(--muted)';
+    }
+
+    chrome.storage.local.get({ deviceName: '' }, (localData) => {
+        fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                license_key: licenseKey,
+                client_id: clientId,
+                client_name: localData.deviceName || '',
+                version: chrome.runtime.getManifest().version
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (handleVersionCheckResponse(data)) return;
+            if (data.status === 'success') {
+                // Lisans geçerli
+                chrome.storage.local.set({ lisansDurumu: true, lisansSonKullanma: data.expires_at }, () => {
+                    // Ana ekranı göster
+                    document.body.classList.remove('auth-ekrani');
+                    document.getElementById('lisansAktivasyonEkrani').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'block';
+
+                    // Rozeti güncelle
+                    if (badge) {
+                        const expDate = new Date(data.expires_at);
+                        badge.textContent = `Aktif (${expDate.toLocaleDateString('tr-TR')})`;
+                        badge.style.color = 'var(--green)';
+                    }
+
+                    // Normal popup yükleme kodunu çalıştır
+                    mainPanelYukle();
+                });
+            } else {
+                // Lisans geçersiz
+                chrome.storage.local.set({ lisansDurumu: false, panelSifresi: '' }, () => {
+                    document.body.classList.add('auth-ekrani');
+                    document.getElementById('mainContent').style.display = 'none';
+                    document.getElementById('lisansAktivasyonEkrani').style.display = 'flex';
+                    
+                    const hata = document.getElementById('lisansHataMesaji');
+                    if (hata) {
+                        hata.textContent = '❌ ' + data.message;
+                    }
+                    setupLicenseActivationListener(clientId);
+                });
+            }
+        })
+        .catch(err => {
+            console.error('Lisans doğrulama hatası:', err);
+            // Sunucuya ulaşılamazsa çevrimdışı kullanım kontrolü yap
+            chrome.storage.local.get({ lisansDurumu: false, lisansSonKullanma: '' }, (localData2) => {
+                const now = new Date();
+                const expDate = localData2.lisansSonKullanma ? new Date(localData2.lisansSonKullanma) : null;
+                
+                if (localData2.lisansDurumu && expDate && expDate > now) {
+                    // Sunucuya ulaşılamıyor ama lokaldeki son bilgiye göre hala süresi var → İzin ver
+                    document.body.classList.remove('auth-ekrani');
+                    document.getElementById('lisansAktivasyonEkrani').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'block';
+                    if (badge) {
+                        badge.textContent = `Çevrimdışı (${expDate.toLocaleDateString('tr-TR')})`;
+                        badge.style.color = 'var(--accent3)';
+                    }
+                    mainPanelYukle();
+                } else {
+                    // Lisans yok veya süresi geçmiş
+                    document.body.classList.add('auth-ekrani');
+                    document.getElementById('mainContent').style.display = 'none';
+                    document.getElementById('lisansAktivasyonEkrani').style.display = 'flex';
+                    
+                    const hata = document.getElementById('lisansHataMesaji');
+                    if (hata) {
+                        hata.textContent = '❌ Sunucuya bağlanılamadı. Lütfen internetinizi kontrol edin.';
+                    }
+                    setupLicenseActivationListener(clientId);
+                }
+            });
+        });
+    });
+}
+
+let activationListenerAttached = false;
+function setupLicenseActivationListener(clientId) {
+    if (activationListenerAttached) return;
+    activationListenerAttached = true;
+
+    const btn = document.getElementById('lisansAktiveEtBtn');
+    const input = document.getElementById('lisansKeyInput');
+    const hata = document.getElementById('lisansHataMesaji');
+    const atlaBtn = document.getElementById('lisansAtlaBtn');
+
+    btn.addEventListener('click', () => {
+        const key = input.value.trim().toUpperCase();
+        if (!key) {
+            hata.textContent = 'Lütfen lisans anahtarınızı girin!';
+            input.style.borderColor = 'var(--red)';
+            return;
+        }
+
+        hata.textContent = 'Doğrulanıyor...';
+        hata.style.color = 'var(--text)';
+        btn.disabled = true;
+
+        chrome.storage.local.get({ deviceName: '' }, (localData) => {
+            fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    license_key: key,
+                    client_id: clientId,
+                    client_name: localData.deviceName || '',
+                    version: chrome.runtime.getManifest().version
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                if (handleVersionCheckResponse(data)) return;
+                if (data.status === 'success') {
+                    chrome.storage.local.set({ 
+                        lisansAnahtari: key, 
+                        lisansDurumu: true, 
+                        lisansSonKullanma: data.expires_at 
+                    }, () => {
+                        hata.textContent = '✓ Başarıyla aktive edildi!';
+                        hata.style.color = 'var(--green)';
+                        input.style.borderColor = 'var(--green)';
+                        
+                        setTimeout(() => {
+                            // Lisans doğrulandı, ana panele geç
+                            document.body.classList.remove('auth-ekrani');
+                            document.getElementById('lisansAktivasyonEkrani').style.display = 'none';
+                            document.getElementById('mainContent').style.display = 'block';
+                            
+                            const badge = document.getElementById('lisansSureBadge');
+                            if (badge) {
+                                const expDate = new Date(data.expires_at);
+                                badge.textContent = `Aktif (${expDate.toLocaleDateString('tr-TR')})`;
+                                badge.style.color = 'var(--green)';
+                            }
+                            
+                            mainPanelYukle();
+                        }, 1000);
+                    });
+                } else {
+                    hata.textContent = '❌ ' + data.message;
+                    hata.style.color = 'var(--red)';
+                    input.style.borderColor = 'var(--red)';
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                hata.textContent = '❌ Bağlantı hatası oluştu!';
+                hata.style.color = 'var(--red)';
+                input.style.borderColor = 'var(--red)';
+            });
+        });
+    });
+
+    if (atlaBtn) {
+        atlaBtn.addEventListener('click', () => {
+            chrome.storage.local.set({ 
+                lisansDurumu: false,
+                lisansAnahtari: '',
+                panelSifresi: ''
+            }, () => {
+                document.body.classList.remove('auth-ekrani');
+                document.getElementById('lisansAktivasyonEkrani').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                mainPanelYukle();
+            });
+        });
+    }
+
+    // Enter tuşu desteği
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            btn.click();
+        }
+    });
+}
+
+let limitTimerInterval = null;
+
+function limitSifirlamaTimerBaslat(limitSifirlamaZamani, gunlukAdet) {
+    if (limitTimerInterval) {
+        clearInterval(limitTimerInterval);
+        limitTimerInterval = null;
+    }
+
+    const badge = document.getElementById('lisansSureBadge');
+    if (!badge) return;
+
+    if (!limitSifirlamaZamani || limitSifirlamaZamani === 0 || gunlukAdet === 0) {
+        badge.textContent = `Ücretsiz Sürüm (${20 - gunlukAdet}/20) - Kullanıma Hazır`;
+        badge.style.color = 'var(--green)';
+        return;
+    }
+
+    function guncelle() {
+        const simdi = Date.now();
+        const kalanMs = limitSifirlamaZamani - simdi;
+
+        if (kalanMs <= 0) {
+            badge.textContent = `Ücretsiz Sürüm (20/20) - Haklar Yenilendi`;
+            badge.style.color = 'var(--green)';
+            clearInterval(limitTimerInterval);
+            limitTimerInterval = null;
+            // Sıfırlamayı kaydet
+            chrome.storage.local.set({
+                gunlukGonderimAdet: 0,
+                limitSifirlamaZamani: 0
+            });
+            return;
+        }
+
+        const saniye = Math.floor((kalanMs / 1000) % 60);
+        const dakika = Math.floor((kalanMs / (1000 * 60)) % 60);
+        const saat = Math.floor(kalanMs / (1000 * 60 * 60));
+
+        const sureYazisi = `${saat}sa ${dakika}dk ${saniye}sn`;
+        const kalanHak = Math.max(0, 20 - gunlukAdet);
+        badge.textContent = `Ücretsiz Sürüm (${kalanHak}/20) - Haklar ${sureYazisi} sonra yenilenecek`;
+        badge.style.color = 'var(--accent2)';
+    }
+
+    guncelle();
+    limitTimerInterval = setInterval(guncelle, 1000);
+}
+
+function mainPanelYukle() {
     chrome.storage.local.get({
         hedefLink: '',
         gecikmeMs: 500,
@@ -49,8 +346,121 @@ function sifreDogrulandi() {
         sablonlar: [],
         aktifSablon: '',
         sesDurumu: 'acik',
-        panelSifresi: ''
+        panelSifresi: '',
+        insansiModAktif: false,
+        insansiFare: true,
+        insansiHata: true,
+        insansiKaydir: true,
+        lisansDurumu: false,
+        lisansSonKullanma: '',
+        gunlukGonderimAdet: 0,
+        limitSifirlamaZamani: 0,
+        clientId: '',
+        deviceName: '',
+        lastVipWelcomeTime: 0
     }, (data) => {
+        // VIP Hoş Geldin Sürpriz Ekranı (15 saniye cooldown korumalı)
+        const welcomeEkrani = document.getElementById('vipWelcomeEkrani');
+        const welcomeName = document.getElementById('vipWelcomeName');
+        const mainContent = document.getElementById('mainContent');
+        const now = Date.now();
+        const timeDiff = now - (data.lastVipWelcomeTime || 0);
+
+        if (data.lisansDurumu && timeDiff > 15000 && welcomeEkrani && welcomeName && mainContent) {
+            chrome.storage.local.set({ lastVipWelcomeTime: now });
+            welcomeName.textContent = `⭐ VIP (${data.deviceName || 'Üye'})`;
+            
+            document.body.classList.add('auth-ekrani');
+            mainContent.style.display = 'none';
+            welcomeEkrani.style.display = 'flex';
+            welcomeEkrani.style.opacity = '1';
+            
+            setTimeout(() => {
+                welcomeEkrani.style.opacity = '0';
+                document.body.classList.remove('auth-ekrani');
+                mainContent.style.display = 'block';
+                setTimeout(() => {
+                    welcomeEkrani.style.display = 'none';
+                }, 400);
+            }, 1200);
+        }
+
+        // Sunucudan limit sıfırlama talebini kontrol et
+        if (data.clientId) {
+            fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    client_id: data.clientId,
+                    client_name: data.deviceName || '',
+                    check_reset: true,
+                    version: chrome.runtime.getManifest().version
+                })
+            })
+            .then(res => res.json())
+            .then(resData => {
+                if (handleVersionCheckResponse(resData)) return;
+                if (resData.status === 'success' && resData.reset_limit === true) {
+                    chrome.storage.local.set({
+                        gunlukGonderimAdet: 0,
+                        limitSifirlamaZamani: 0
+                    }, () => {
+                        setStatus('Limitler sıfırlandı ✓', 'ok');
+                        uiLogEkle('Limitler yönetici tarafından sıfırlandı.', 'info');
+                    });
+                }
+            })
+            .catch(err => console.error('Limit sıfırlama sorgulama hatası:', err));
+        }
+
+        // Cihaz Adı (Etiket) ayarlanması ve kaydedilmesi
+        const deviceNameInput = document.getElementById('deviceNameInput');
+        if (deviceNameInput) {
+            deviceNameInput.value = data.deviceName || '';
+            deviceNameInput.onchange = () => {
+                const newName = deviceNameInput.value.trim();
+                chrome.storage.local.set({ deviceName: newName }, () => {
+                    // Sunucuya ismi hemen gönder
+                    if (data.clientId) {
+                        fetch(API_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                client_id: data.clientId,
+                                client_name: newName,
+                                check_reset: true,
+                                version: chrome.runtime.getManifest().version
+                            })
+                        })
+                        .then(res => res.json())
+                        .then(resData => {
+                            handleVersionCheckResponse(resData);
+                        })
+                        .catch(e => console.error('Cihaz adı eşitleme hatası:', e));
+                    }
+                });
+            };
+        }
+
+        // Cihaz Kimliğini (Client ID) Arayüzde Göster ve Kopyalama Özelliği Ekle
+        const clientIdLabel = document.getElementById('clientIdLabel');
+        if (clientIdLabel) {
+            if (data.clientId) {
+                const kisaId = data.clientId.length > 15 ? data.clientId.substring(0, 15) + '...' : data.clientId;
+                clientIdLabel.textContent = kisaId;
+                clientIdLabel.title = `Kopyalamak için tıkla: ${data.clientId}`;
+                clientIdLabel.onclick = () => {
+                    navigator.clipboard.writeText(data.clientId).then(() => {
+                        setStatus('Cihaz Kimliği Kopyalandı ✓', 'ok');
+                    });
+                };
+            } else {
+                clientIdLabel.textContent = 'Bilinmiyor';
+            }
+        }
+
         document.documentElement.setAttribute('data-theme', data.tema);
         const temaSecici = document.getElementById('temaSecici');
         if (temaSecici) temaSecici.value = data.tema;
@@ -74,9 +484,75 @@ function sifreDogrulandi() {
             textEl.textContent = data.aktifSablon ? `Aktif Şablon: ${data.aktifSablon}` : 'Aktif Şablon: Yok';
         }
 
+        // Lisans Badge Güncelleme
+        const badge = document.getElementById('lisansSureBadge');
+        if (badge) {
+            if (data.lisansDurumu) {
+                const expDate = new Date(data.lisansSonKullanma);
+                badge.textContent = `Aktif (${expDate.toLocaleDateString('tr-TR')})`;
+                badge.style.color = 'var(--green)';
+                if (limitTimerInterval) {
+                    clearInterval(limitTimerInterval);
+                    limitTimerInterval = null;
+                }
+            } else {
+                let simdi = Date.now();
+                let limitSifirlamaZamani = data.limitSifirlamaZamani || 0;
+                let gunlukAdet = data.gunlukGonderimAdet || 0;
+
+                if (limitSifirlamaZamani > simdi + LIMIT_SURESI_MS) {
+                    gunlukAdet = 0;
+                    limitSifirlamaZamani = 0;
+                    chrome.storage.local.set({
+                        gunlukGonderimAdet: 0,
+                        limitSifirlamaZamani: 0
+                    });
+                } else if (limitSifirlamaZamani > 0 && simdi >= limitSifirlamaZamani) {
+                    gunlukAdet = 0;
+                    limitSifirlamaZamani = 0;
+                    chrome.storage.local.set({
+                        gunlukGonderimAdet: 0,
+                        limitSifirlamaZamani: 0
+                    });
+                }
+                limitSifirlamaTimerBaslat(limitSifirlamaZamani, gunlukAdet);
+            }
+        }
+
         hesaplaSeviyeVeUnvan(data.genelToplam);
 
+        // VIP Badge and VIP Destek Title updates
+        const vipBadge = document.getElementById('vipBadge');
+        const destekTitle = document.getElementById('destekTitleLabel');
+        if (data.lisansDurumu) {
+            if (vipBadge) vipBadge.style.display = 'inline-block';
+            if (destekTitle) destekTitle.innerHTML = '✉️ VIP Destek Hattı ⭐';
+        } else {
+            if (vipBadge) vipBadge.style.display = 'none';
+            if (destekTitle) destekTitle.innerHTML = '✉️ Destek & Ticket';
+        }
+
         const slider = document.getElementById('delaySlider');
+        const delayNote = document.getElementById('delaySpeedNote');
+        
+        if (data.lisansDurumu) {
+            slider.min = "200";
+            if (delayNote) {
+                delayNote.textContent = "⚡ Premium Turbo Modu Aktif (200ms - 3000ms)";
+                delayNote.style.color = "var(--green)";
+            }
+        } else {
+            slider.min = "1000";
+            if (delayNote) {
+                delayNote.textContent = "🔒 1000ms altı Turbo Mod lisans gerektirir.";
+                delayNote.style.color = "var(--muted)";
+            }
+            if (data.gecikmeMs < 1000) {
+                data.gecikmeMs = 1000;
+                chrome.storage.local.set({ gecikmeMs: 1000 });
+            }
+        }
+        
         slider.value = data.gecikmeMs;
         updateSliderUI(data.gecikmeMs);
 
@@ -87,6 +563,67 @@ function sifreDogrulandi() {
         // Şifre durumunu güncelle
         sifreDurumGuncelle(data.panelSifresi);
 
+        // İnsansı Mod Ayarlarını Yükle
+        const insansiSecici = document.getElementById('insansiModSecici');
+        const insansiAlt = document.getElementById('insansiAltAyarlar');
+        const fareCb = document.getElementById('insansiFareCb');
+        const hataCb = document.getElementById('insansiHataCb');
+        const kaydirCb = document.getElementById('insansiKaydirCb');
+
+        let insansiMod = data.insansiModAktif || false;
+
+        if (!data.lisansDurumu) {
+            insansiMod = false;
+            if (insansiSecici) {
+                insansiSecici.value = 'kapali';
+                insansiSecici.disabled = true;
+                insansiSecici.options[0].textContent = "❌ İnsansı Mod Kapalı";
+                if (insansiSecici.options[1]) {
+                    insansiSecici.options[1].textContent = "🔒 İnsansı Mod (Premium)";
+                    insansiSecici.options[1].disabled = true;
+                }
+            }
+            if (insansiAlt) insansiAlt.style.display = 'none';
+            if (fareCb) { fareCb.checked = false; fareCb.disabled = true; }
+            if (hataCb) { hataCb.checked = false; hataCb.disabled = true; }
+            if (kaydirCb) { kaydirCb.checked = false; kaydirCb.disabled = true; }
+
+            if (data.insansiModAktif) {
+                chrome.storage.local.set({
+                    insansiModAktif: false,
+                    insansiFare: false,
+                    insansiHata: false,
+                    insansiKaydir: false
+                });
+            }
+        } else {
+            if (insansiSecici) {
+                insansiSecici.value = insansiMod ? 'acik' : 'kapali';
+                insansiSecici.disabled = false;
+                insansiSecici.options[0].textContent = "❌ İnsansı Mod Kapalı";
+                if (insansiSecici.options[1]) {
+                    insansiSecici.options[1].textContent = "✅ İnsansı Mod Aktif";
+                    insansiSecici.options[1].disabled = false;
+                }
+            }
+            if (insansiAlt) {
+                insansiAlt.style.display = insansiMod ? 'flex' : 'none';
+            }
+            if (fareCb) { fareCb.checked = data.insansiFare !== false; fareCb.disabled = false; }
+            if (hataCb) { hataCb.checked = data.insansiHata !== false; hataCb.disabled = false; }
+            if (kaydirCb) { kaydirCb.checked = data.insansiKaydir !== false; kaydirCb.disabled = false; }
+        }
+
+        // İnsansı Mod Seçici Değişim Dinleyicisi
+        if (insansiSecici) {
+            insansiSecici.addEventListener('change', (e) => {
+                const aktif = e.target.value === 'acik';
+                if (insansiAlt) {
+                    insansiAlt.style.display = aktif ? 'flex' : 'none';
+                }
+            });
+        }
+
         // Hız panelini başlat
         hizPaneliGuncelle(data.botAktif);
         hizTimerBaslat();
@@ -95,6 +632,54 @@ function sifreDogrulandi() {
 
 chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local') {
+        if (changes.gunlukGonderimAdet || changes.lisansDurumu || changes.limitSifirlamaZamani) {
+            chrome.storage.local.get({ lisansDurumu: false, gunlukGonderimAdet: 0, limitSifirlamaZamani: 0, lisansSonKullanma: '' }, (data) => {
+                const badge = document.getElementById('lisansSureBadge');
+                const vipBadge = document.getElementById('vipBadge');
+                const destekTitle = document.getElementById('destekTitleLabel');
+
+                if (data.lisansDurumu) {
+                    if (vipBadge) vipBadge.style.display = 'inline-block';
+                    if (destekTitle) destekTitle.innerHTML = '✉️ VIP Destek Hattı ⭐';
+                } else {
+                    if (vipBadge) vipBadge.style.display = 'none';
+                    if (destekTitle) destekTitle.innerHTML = '✉️ Destek & Ticket';
+                }
+
+                if (badge) {
+                    if (data.lisansDurumu) {
+                        const expDate = new Date(data.lisansSonKullanma);
+                        badge.textContent = `Aktif (${expDate.toLocaleDateString('tr-TR')})`;
+                        badge.style.color = 'var(--green)';
+                        if (limitTimerInterval) {
+                            clearInterval(limitTimerInterval);
+                            limitTimerInterval = null;
+                        }
+                    } else {
+                        let simdi = Date.now();
+                        let limitSifirlamaZamani = data.limitSifirlamaZamani || 0;
+                        let gunlukAdet = data.gunlukGonderimAdet || 0;
+
+                        if (limitSifirlamaZamani > simdi + LIMIT_SURESI_MS) {
+                            gunlukAdet = 0;
+                            limitSifirlamaZamani = 0;
+                            chrome.storage.local.set({
+                                gunlukGonderimAdet: 0,
+                                limitSifirlamaZamani: 0
+                            });
+                        } else if (limitSifirlamaZamani > 0 && simdi >= limitSifirlamaZamani) {
+                            gunlukAdet = 0;
+                            limitSifirlamaZamani = 0;
+                            chrome.storage.local.set({
+                                gunlukGonderimAdet: 0,
+                                limitSifirlamaZamani: 0
+                            });
+                        }
+                        limitSifirlamaTimerBaslat(limitSifirlamaZamani, gunlukAdet);
+                    }
+                }
+            });
+        }
         // Tur sayaçları güncellenirse
         if (changes.sayacToplam) {
             document.getElementById('statToplam').innerText = changes.sayacToplam.newValue;
@@ -127,6 +712,18 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         }
         if (changes.hedefLink) {
             document.getElementById('hedefLinkInput').value = changes.hedefLink.newValue;
+            const webview = document.getElementById('automation-webview');
+            const wvUrlInput = document.getElementById('wvUrlInput');
+            if (webview && changes.hedefLink.newValue) {
+                try {
+                    webview.loadURL(changes.hedefLink.newValue);
+                } catch (err) {
+                    webview.setAttribute('src', changes.hedefLink.newValue);
+                }
+                if (wvUrlInput) {
+                    wvUrlInput.value = changes.hedefLink.newValue;
+                }
+            }
         }
         if (changes.tarananSorular || changes.ozelKurallar) {
             chrome.storage.local.get(['tarananSorular', 'ozelKurallar'], (data) => {
@@ -158,6 +755,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
                 sesSecici.value = changes.sesDurumu.newValue;
             }
         }
+
     }
 });
 
@@ -398,7 +996,6 @@ document.getElementById('kaydetBtn').addEventListener('click', (e) => {
         return;
     }
 
-    const ortalamaGecikme = parseInt(document.getElementById('delaySlider').value);
     let hedefAdeti = parseInt(document.getElementById('hedefAdetInput').value) || 10;
 
     if (hedefAdeti > 50) {
@@ -416,24 +1013,49 @@ document.getElementById('kaydetBtn').addEventListener('click', (e) => {
         return;
     }
 
-    chrome.storage.local.set({
-        hedefLink: link,
-        gecikmeMs: ortalamaGecikme,
-        hedefAdet: hedefAdeti
-    }, () => {
-        setStatus('Ayarlar kaydedildi ✓', 'ok');
-        uiLogEkle('Ayarlar güncellendi.', 'info');
+    chrome.storage.local.get({ lisansDurumu: false }, (licData) => {
+        let ortalamaGecikme = parseInt(document.getElementById('delaySlider').value);
+        if (!licData.lisansDurumu && ortalamaGecikme < 1000) {
+            ortalamaGecikme = 1000;
+            document.getElementById('delaySlider').value = 1000;
+            updateSliderUI(1000);
+        }
 
-        const eskiYazi = btn.textContent;
-        btn.textContent = 'KAYDEDİLDİ ✓';
-        btn.style.background = 'var(--green)';
-        btn.style.color = '#000';
+        let insansiModAktif = document.getElementById('insansiModSecici').value === 'acik';
+        let insansiFare = document.getElementById('insansiFareCb').checked;
+        let insansiHata = document.getElementById('insansiHataCb').checked;
+        let insansiKaydir = document.getElementById('insansiKaydirCb').checked;
 
-        setTimeout(() => {
-            btn.textContent = eskiYazi;
-            btn.style.background = 'var(--accent)';
-            btn.style.color = '#fff';
-        }, 2000);
+        if (!licData.lisansDurumu) {
+            insansiModAktif = false;
+            insansiFare = false;
+            insansiHata = false;
+            insansiKaydir = false;
+        }
+
+        chrome.storage.local.set({
+            hedefLink: link,
+            gecikmeMs: ortalamaGecikme,
+            hedefAdet: hedefAdeti,
+            insansiModAktif: insansiModAktif,
+            insansiFare: insansiFare,
+            insansiHata: insansiHata,
+            insansiKaydir: insansiKaydir
+        }, () => {
+            setStatus('Ayarlar kaydedildi ✓', 'ok');
+            uiLogEkle('Ayarlar güncellendi.', 'info');
+
+            const eskiYazi = btn.textContent;
+            btn.textContent = 'KAYDEDİLDİ ✓';
+            btn.style.background = 'var(--green)';
+            btn.style.color = '#000';
+
+            setTimeout(() => {
+                btn.textContent = eskiYazi;
+                btn.style.background = 'var(--accent)';
+                btn.style.color = '#fff';
+            }, 2000);
+        });
     });
 });
 
@@ -446,7 +1068,11 @@ document.getElementById('sifirlaBtn').addEventListener('click', () => {
         ozelKurallar: {},
         aktifSablon: '',
         botBaslangicZamani: 0,
-        gonderimZamanlari: []
+        gonderimZamanlari: [],
+        insansiModAktif: false,
+        insansiFare: true,
+        insansiHata: true,
+        insansiKaydir: true
     }, () => {
         // Tur istatistiklerini sıfırla
         document.getElementById('statToplam').innerText = '0';
@@ -508,10 +1134,16 @@ document.getElementById('sablonKaydetBtn').addEventListener('click', () => {
         hedefLink: '', gecikmeMs: 500, hedefAdet: 10,
         tarananSorular: [], ozelKurallar: {}, sablonlar: [],
         sayacToplam: 0, sayacErkek: 0, sayacKadin: 0,
-        genelToplam: 0, genelErkek: 0, genelKadin: 0
+        genelToplam: 0, genelErkek: 0, genelKadin: 0,
+        lisansDurumu: false
     }, (data) => {
         let yeniSablonlar = [...data.sablonlar];
         const varOlanIndex = yeniSablonlar.findIndex(s => s.isim === isim);
+
+        if (!data.lisansDurumu && varOlanIndex === -1 && yeniSablonlar.length >= 1) {
+            setStatus('❌ Ücretsiz sürüm en fazla 1 şablon kaydedebilir!', 'err');
+            return;
+        }
 
         let sayacToplam = 0, sayacErkek = 0, sayacKadin = 0;
         let genelToplam = 0, genelErkek = 0, genelKadin = 0;
@@ -1183,17 +1815,33 @@ function sifreDurumGuncelle(sifreHash) {
 
     if (!durumEl) return;
 
-    if (sifreHash) {
-        durumEl.textContent = 'Şifre: ✅ Aktif';
-        durumEl.style.color = 'var(--green)';
-        if (degistirBtn) degistirBtn.textContent = '🔑 Şifre Değiştir';
-        if (kaldirBtn) kaldirBtn.style.display = 'block';
-    } else {
-        durumEl.textContent = 'Şifre: Aktif Değil';
-        durumEl.style.color = 'var(--muted)';
-        if (degistirBtn) degistirBtn.textContent = '🔑 Şifre Belirle';
-        if (kaldirBtn) kaldirBtn.style.display = 'none';
-    }
+    chrome.storage.local.get({ lisansDurumu: false }, (data) => {
+        if (!data.lisansDurumu) {
+            durumEl.textContent = '🔒 Şifre Koruması (Premium)';
+            durumEl.style.color = 'var(--muted)';
+            if (degistirBtn) {
+                degistirBtn.textContent = '🔒 Şifre Belirle';
+                degistirBtn.disabled = true;
+            }
+            if (kaldirBtn) kaldirBtn.style.display = 'none';
+            if (sifreHash) {
+                chrome.storage.local.set({ panelSifresi: '' });
+            }
+        } else {
+            if (degistirBtn) degistirBtn.disabled = false;
+            if (sifreHash) {
+                durumEl.textContent = 'Şifre: ✅ Aktif';
+                durumEl.style.color = 'var(--green)';
+                if (degistirBtn) degistirBtn.textContent = '🔑 Şifre Değiştir';
+                if (kaldirBtn) kaldirBtn.style.display = 'block';
+            } else {
+                durumEl.textContent = 'Şifre: Aktif Değil';
+                durumEl.style.color = 'var(--muted)';
+                if (degistirBtn) degistirBtn.textContent = '🔑 Şifre Belirle';
+                if (kaldirBtn) kaldirBtn.style.display = 'none';
+            }
+        }
+    });
 }
 
 // Kilit Açma Butonu
@@ -1275,7 +1923,11 @@ document.getElementById('sifreAtlaBtn').addEventListener('click', () => {
 
 // Şifre Değiştir (Geniş Ekran panelinden)
 document.getElementById('sifreDegistirBtn').addEventListener('click', () => {
-    chrome.storage.local.get({ panelSifresi: '' }, (data) => {
+    chrome.storage.local.get({ panelSifresi: '', lisansDurumu: false }, (data) => {
+        if (!data.lisansDurumu) {
+            alert('Şifre koruması premium bir özelliktir!');
+            return;
+        }
         if (data.panelSifresi) {
             // Mevcut şifreyi sor
             const mevcut = prompt('Mevcut şifrenizi girin:');
@@ -1307,7 +1959,8 @@ document.getElementById('sifreDegistirBtn').addEventListener('click', () => {
 
 // Şifreyi Kaldır
 document.getElementById('sifreKaldirBtn').addEventListener('click', () => {
-    chrome.storage.local.get({ panelSifresi: '' }, (data) => {
+    chrome.storage.local.get({ panelSifresi: '', lisansDurumu: false }, (data) => {
+        if (!data.lisansDurumu) return;
         if (!data.panelSifresi) return;
 
         const mevcut = prompt('Şifreyi kaldırmak için mevcut şifrenizi girin:');
@@ -1322,6 +1975,474 @@ document.getElementById('sifreKaldirBtn').addEventListener('click', () => {
             sifreDurumGuncelle('');
         });
     });
+});
+
+// --- DESTEK & TICKET SİSTEMİ ---
+
+let activeClientTicketId = null;
+let clientChatInterval = null;
+let clientLastMsgCount = 0;
+
+// Tab Geçişleri
+const ticketYeniTabBtn = document.getElementById('ticketYeniTabBtn');
+const ticketListeTabBtn = document.getElementById('ticketListeTabBtn');
+const ticketYeniBolumu = document.getElementById('ticketYeniBolumu');
+const ticketListeBolumu = document.getElementById('ticketListeBolumu');
+const ticketChatBolumu = document.getElementById('ticketChatBolumu');
+
+if (ticketYeniTabBtn && ticketListeTabBtn) {
+    ticketYeniTabBtn.addEventListener('click', () => {
+        ticketYeniTabBtn.classList.add('active');
+        ticketListeTabBtn.classList.remove('active');
+
+        ticketYeniBolumu.style.display = 'flex';
+        ticketListeBolumu.style.display = 'none';
+        if (ticketChatBolumu) ticketChatBolumu.style.display = 'none';
+
+        if (clientChatInterval) {
+            clearInterval(clientChatInterval);
+            clientChatInterval = null;
+        }
+        activeClientTicketId = null;
+    });
+
+    ticketListeTabBtn.addEventListener('click', () => {
+        ticketListeTabBtn.classList.add('active');
+        ticketYeniTabBtn.classList.remove('active');
+
+        ticketYeniBolumu.style.display = 'none';
+        ticketListeBolumu.style.display = 'flex';
+        if (ticketChatBolumu) ticketChatBolumu.style.display = 'none';
+
+        if (clientChatInterval) {
+            clearInterval(clientChatInterval);
+            clientChatInterval = null;
+        }
+        activeClientTicketId = null;
+
+        ticketsYukle();
+    });
+}
+
+function ticketsYukle() {
+    const container = document.getElementById('ticketListeContainer');
+    const badge = document.getElementById('ticketCountBadge');
+    if (!container) return;
+
+    chrome.storage.local.get({ clientId: '' }, (data) => {
+        const clientId = data.clientId || 'unknown';
+        const feedbackUrl = 'http://localhost/backend/feedback.php';
+
+        fetch(feedbackUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'list',
+                client_id: clientId
+            })
+        })
+        .then(res => res.json())
+        .then(resData => {
+            if (resData.status === 'success' && resData.tickets) {
+                const tickets = resData.tickets;
+                if (badge) badge.textContent = `(${tickets.length})`;
+
+                container.innerHTML = '';
+                if (tickets.length === 0) {
+                    container.innerHTML = '<div style="font-size: 8px; color: var(--muted); text-align: center; padding: 10px 0;">Henüz açılmış destek talebiniz yok.</div>';
+                    return;
+                }
+
+                tickets.forEach(ticket => {
+                    const item = document.createElement('div');
+                    item.className = 'ticket-item';
+                    item.style.padding = '8px 6px';
+                    item.style.cursor = 'pointer';
+
+                    const header = document.createElement('div');
+                    header.className = 'ticket-header';
+
+                    const idLabel = document.createElement('span');
+                    idLabel.className = 'ticket-id';
+                    idLabel.textContent = `Talep #${ticket.id}`;
+
+                    const rightHeader = document.createElement('div');
+                    rightHeader.style.display = 'flex';
+                    rightHeader.style.gap = '6px';
+                    rightHeader.style.alignItems = 'center';
+
+                    // Formatted Date
+                    const ticketDate = document.createElement('span');
+                    ticketDate.className = 'ticket-date';
+                    const dateObj = new Date(ticket.created_at);
+                    ticketDate.textContent = dateObj.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+                    const statusIndicator = document.createElement('span');
+                    statusIndicator.className = `ticket-status ${ticket.status}`;
+                    
+                    if (ticket.status === 'open') {
+                        statusIndicator.textContent = '● Açık';
+                    } else if (ticket.status === 'answered') {
+                        statusIndicator.textContent = '● Yanıtlandı';
+                    } else if (ticket.status === 'closed') {
+                        statusIndicator.textContent = '● Kapatıldı';
+                    }
+
+                    rightHeader.appendChild(ticketDate);
+                    rightHeader.appendChild(statusIndicator);
+                    header.appendChild(idLabel);
+                    header.appendChild(rightHeader);
+
+                    const snippet = document.createElement('div');
+                    snippet.className = 'ticket-body collapsed';
+                    // Find the last user message or initial message
+                    const lastMsg = (ticket.messages && ticket.messages.length > 0) ? ticket.messages[ticket.messages.length - 1].message : '';
+                    snippet.textContent = lastMsg || 'Detayları görmek için tıklayın...';
+
+                    item.appendChild(header);
+                    item.appendChild(snippet);
+
+                    // Click to open Chat View
+                    item.addEventListener('click', (e) => {
+                        if (window.getSelection().toString()) return;
+                        openClientChat(ticket.id, ticket.status, ticket.email);
+                    });
+
+                    container.appendChild(item);
+                });
+            } else {
+                container.innerHTML = '<div style="font-size: 8px; color: var(--red); text-align: center; padding: 10px 0;">Veri yüklenemedi!</div>';
+            }
+        })
+        .catch(err => {
+            console.error('Destek listeleme hatası:', err);
+            container.innerHTML = '<div style="font-size: 8px; color: var(--red); text-align: center; padding: 10px 0;">Bağlantı hatası!</div>';
+        });
+    });
+}
+
+function openClientChat(ticketId, ticketStatus, email) {
+    activeClientTicketId = ticketId;
+    clientLastMsgCount = 0;
+
+    const chatTitle = document.getElementById('ticketChatTitle');
+    const chatStatus = document.getElementById('ticketChatStatus');
+    const replyInput = document.getElementById('ticketChatReplyInput');
+    const replyBtn = document.getElementById('ticketChatReplyBtn');
+    const inputArea = document.getElementById('ticketChatInputArea');
+    const closedMsg = document.getElementById('ticketChatClosedMsg');
+
+    if (chatTitle) chatTitle.textContent = `Talep #${ticketId}`;
+
+    if (chatStatus) {
+        chatStatus.className = `ticket-status ${ticketStatus}`;
+        if (ticketStatus === 'open') {
+            chatStatus.textContent = '● Açık';
+        } else if (ticketStatus === 'answered') {
+            chatStatus.textContent = '● Yanıtlandı';
+        } else if (ticketStatus === 'closed') {
+            chatStatus.textContent = '● Kapatıldı';
+        }
+    }
+
+    if (ticketStatus === 'closed') {
+        if (inputArea) inputArea.style.display = 'none';
+        if (closedMsg) closedMsg.style.display = 'block';
+    } else {
+        if (inputArea) inputArea.style.display = 'flex';
+        if (closedMsg) closedMsg.style.display = 'none';
+    }
+
+    // Toggle view visibility
+    if (ticketListeBolumu) ticketListeBolumu.style.display = 'none';
+    if (ticketChatBolumu) ticketChatBolumu.style.display = 'flex';
+
+    if (replyInput) replyInput.value = '';
+
+    // Draw chat contents immediately
+    fetchAndDrawChat(ticketId);
+
+    // Poll every 3 seconds for admin responses
+    if (clientChatInterval) clearInterval(clientChatInterval);
+    clientChatInterval = setInterval(() => {
+        if (activeClientTicketId === ticketId) {
+            fetchAndDrawChat(ticketId, true);
+        }
+    }, 3000);
+}
+
+function fetchAndDrawChat(ticketId, silent = false) {
+    chrome.storage.local.get({ clientId: '' }, (data) => {
+        const clientId = data.clientId || 'unknown';
+        const feedbackUrl = 'http://localhost/backend/feedback.php';
+
+        fetch(feedbackUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'list',
+                client_id: clientId
+            })
+        })
+        .then(res => res.json())
+        .then(resData => {
+            if (resData.status === 'success' && resData.tickets) {
+                const ticket = resData.tickets.find(t => t.id == ticketId);
+                if (!ticket) return;
+
+                // Sync status indicator in header
+                const chatStatus = document.getElementById('ticketChatStatus');
+                if (chatStatus) {
+                    chatStatus.className = `ticket-status ${ticket.status}`;
+                    if (ticket.status === 'open') chatStatus.textContent = '● Açık';
+                    else if (ticket.status === 'answered') chatStatus.textContent = '● Yanıtlandı';
+                    else if (ticket.status === 'closed') chatStatus.textContent = '● Kapatıldı';
+                }
+
+                const inputArea = document.getElementById('ticketChatInputArea');
+                const closedMsg = document.getElementById('ticketChatClosedMsg');
+                if (ticket.status === 'closed') {
+                    if (inputArea) inputArea.style.display = 'none';
+                    if (closedMsg) closedMsg.style.display = 'block';
+                } else {
+                    if (inputArea) inputArea.style.display = 'flex';
+                    if (closedMsg) closedMsg.style.display = 'none';
+                }
+
+                const messages = ticket.messages || [];
+                if (silent && messages.length === clientLastMsgCount) {
+                    return;
+                }
+
+                clientLastMsgCount = messages.length;
+
+                const container = document.getElementById('ticketChatMessages');
+                if (!container) return;
+
+                container.innerHTML = '';
+                if (messages.length === 0) {
+                    container.innerHTML = '<div style="font-size: 8px; color: var(--muted); text-align: center; padding: 10px 0;">Sohbet geçmişi boş.</div>';
+                    return;
+                }
+
+                messages.forEach(msg => {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'chat-bubble-wrapper';
+
+                    const bubble = document.createElement('div');
+                    bubble.className = `chat-bubble ${msg.sender}`;
+
+                    const text = document.createElement('div');
+                    text.textContent = msg.message;
+
+                    const time = document.createElement('span');
+                    time.className = 'chat-bubble-time';
+                    const d = new Date(msg.created_at);
+                    time.textContent = d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+
+                    bubble.appendChild(text);
+                    bubble.appendChild(time);
+                    wrap.appendChild(bubble);
+                    container.appendChild(wrap);
+                });
+
+                container.scrollTop = container.scrollHeight;
+            }
+        })
+        .catch(err => console.error('Mesajlar çekilirken hata:', err));
+    });
+}
+
+// Back Button Action
+const ticketChatBackBtn = document.getElementById('ticketChatBackBtn');
+if (ticketChatBackBtn) {
+    ticketChatBackBtn.addEventListener('click', () => {
+        if (clientChatInterval) {
+            clearInterval(clientChatInterval);
+            clientChatInterval = null;
+        }
+        activeClientTicketId = null;
+
+        if (ticketChatBolumu) ticketChatBolumu.style.display = 'none';
+        if (ticketListeBolumu) ticketListeBolumu.style.display = 'flex';
+
+        ticketsYukle();
+    });
+}
+
+// Send Reply Actions
+const ticketChatReplyBtn = document.getElementById('ticketChatReplyBtn');
+const ticketChatReplyInput = document.getElementById('ticketChatReplyInput');
+
+if (ticketChatReplyBtn && ticketChatReplyInput) {
+    ticketChatReplyBtn.addEventListener('click', () => {
+        const text = ticketChatReplyInput.value.trim();
+        if (!text || !activeClientTicketId) return;
+
+        ticketChatReplyBtn.disabled = true;
+        ticketChatReplyBtn.textContent = '...';
+
+        chrome.storage.local.get({ clientId: '' }, (data) => {
+            const clientId = data.clientId || 'unknown';
+            const feedbackUrl = 'http://localhost/backend/feedback.php';
+
+            fetch(feedbackUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'client_reply',
+                    ticket_id: activeClientTicketId,
+                    client_id: clientId,
+                    reply_text: text
+                })
+            })
+            .then(res => res.json())
+            .then(resData => {
+                ticketChatReplyBtn.disabled = false;
+                ticketChatReplyBtn.textContent = 'GÖNDER';
+                if (resData.status === 'success') {
+                    ticketChatReplyInput.value = '';
+                    fetchAndDrawChat(activeClientTicketId);
+                } else {
+                    alert('Hata: ' + resData.message);
+                }
+            })
+            .catch(err => {
+                ticketChatReplyBtn.disabled = false;
+                ticketChatReplyBtn.textContent = 'GÖNDER';
+                console.error('Yanıt hatası:', err);
+                alert('Bağlantı hatası!');
+            });
+        });
+    });
+
+    ticketChatReplyInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            ticketChatReplyBtn.click();
+        }
+    });
+}
+
+// Yeni Talep Gönderme
+document.getElementById('feedbackGonderBtn').addEventListener('click', () => {
+    const emailInput = document.getElementById('feedbackEmailInput');
+    const msgInput = document.getElementById('feedbackMsgInput');
+    const hata = document.getElementById('feedbackHataMesaji');
+
+    const email = emailInput.value.trim();
+    const msg = msgInput.value.trim();
+
+    if (!email) {
+        hata.textContent = 'Lütfen e-posta adresinizi girin!';
+        hata.style.color = 'var(--red)';
+        emailInput.style.borderColor = 'var(--red)';
+        return;
+    }
+
+    if (!email.includes('@') || !email.includes('.')) {
+        hata.textContent = 'Geçersiz e-posta adresi!';
+        hata.style.color = 'var(--red)';
+        emailInput.style.borderColor = 'var(--red)';
+        return;
+    }
+
+    const parts = email.split('@');
+    const domain = parts[1] ? parts[1].toLowerCase().trim() : '';
+    const allowedDomains = [
+        'gmail.com',
+        'outlook.com',
+        'outlook.com.tr',
+        'hotmail.com',
+        'hotmail.com.tr',
+        'yahoo.com',
+        'yandex.com',
+        'yandex.com.tr',
+        'live.com',
+        'windowslive.com',
+        'icloud.com'
+    ];
+
+    if (!allowedDomains.includes(domain)) {
+        hata.textContent = 'Yalnızca genel e-posta sağlayıcıları (gmail, hotmail, outlook, yandex vb.) kabul edilmektedir!';
+        hata.style.color = 'var(--red)';
+        emailInput.style.borderColor = 'var(--red)';
+        return;
+    }
+
+    if (!msg) {
+        hata.textContent = 'Lütfen detayları yazın!';
+        hata.style.color = 'var(--red)';
+        msgInput.style.borderColor = 'var(--red)';
+        return;
+    }
+
+    hata.textContent = 'Gönderiliyor...';
+    hata.style.color = 'var(--text)';
+    document.getElementById('feedbackGonderBtn').disabled = true;
+
+    chrome.storage.local.get({ clientId: '' }, (data) => {
+        const feedbackUrl = 'http://localhost/backend/feedback.php';
+        fetch(feedbackUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'create',
+                client_id: data.clientId || 'unknown',
+                email: email,
+                message: msg
+            })
+        })
+        .then(res => res.json())
+        .then(resData => {
+            document.getElementById('feedbackGonderBtn').disabled = false;
+            if (resData.status === 'success') {
+                hata.textContent = '✓ Destek talebi oluşturuldu!';
+                hata.style.color = 'var(--green)';
+                emailInput.value = '';
+                msgInput.value = '';
+                emailInput.style.borderColor = '';
+                msgInput.style.borderColor = '';
+                
+                setTimeout(() => {
+                    hata.textContent = '';
+                    if (ticketListeTabBtn) ticketListeTabBtn.click();
+                }, 1500);
+            } else {
+                hata.textContent = '❌ Hata: ' + resData.message;
+                hata.style.color = 'var(--red)';
+            }
+        })
+        .catch(err => {
+            document.getElementById('feedbackGonderBtn').disabled = false;
+            hata.textContent = '❌ Sunucu bağlantı hatası!';
+            hata.style.color = 'var(--red)';
+        });
+    });
+});
+
+// Sayfa ilk yüklendiğinde talep sayısını çekmek için çağrıda bulun
+chrome.storage.local.get({ clientId: '' }, (data) => {
+    if (data.clientId) {
+        const feedbackUrl = 'http://localhost/backend/feedback.php';
+        fetch(feedbackUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'list', client_id: data.clientId })
+        })
+        .then(res => res.json())
+        .then(resData => {
+            if (resData.status === 'success' && resData.tickets) {
+                const countBadge = document.getElementById('ticketCountBadge');
+                if (countBadge) countBadge.textContent = `(${resData.tickets.length})`;
+            }
+        })
+        .catch(e => console.error('İlk talep sayısı yükleme hatası:', e));
+    }
 });
 
 const shakeStyle = document.createElement('style');
